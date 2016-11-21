@@ -2,25 +2,30 @@ var allEdges = [];
 
 function createEdgesFromGridPerimeter(){
   for(var i = 0; i < window.puzzleGrid.squaresCount['x']; i++){
-    new Edge(
+    var e1 = new Edge(
       new Point(i,0),
       new Point(i+1,0)
     );
-    new Edge(
+    e1.add();
+    
+    var e2 = new Edge(
       new Point(i, window.puzzleGrid.squaresCount['y']),
       new Point(i+1,window.puzzleGrid.squaresCount['y'])
     );
+    e2.add();
   }
   
   for(var j = 0; j < window.puzzleGrid.squaresCount['y']; j++){
-    new Edge(
+    var e3 = new Edge(
       new Point(0,j),
       new Point(0, j+1)
     );
-    new Edge(
+    e3.add();
+    var e4 = new Edge(
       new Point(window.puzzleGrid.squaresCount['x'], j),
       new Point(window.puzzleGrid.squaresCount['x'], j+1)
     );
+    e4.add();
   }
 
 }
@@ -36,9 +41,13 @@ function createEdgesFromGridSlices(countX, countY){
 }
 
 function Edge(point1, point2){
-  allEdges.push(this);
   this.point1 = point1;
   this.point2 = point2;
+  
+  this.add = function(){
+    allEdges.push(this);
+  }
+  
   this.render = function(){
     var line = window.puzzleSpace.line(
       this.point1.x * window.puzzleGrid.squareSize, 
@@ -102,7 +111,7 @@ function GridSliceAgent(axis){
     axis == 'y' ? 0 : firstCoord
   )
     
-  function defineNextPoint(point1){
+  function defineNextEdge(point1){
     // This is a simplistic way of choosing the next possible point.
     // What's IMPORTANT is that it won't account for a SliceAgent crossing the lines
     // of another so that an 'X' forms in the middle of a grid box. I'll need some
@@ -112,36 +121,36 @@ function GridSliceAgent(axis){
     // (as well as, but not necessarily, the same Point objects). 
     // I'll need to determine how to remove redundant Edges before I start turning them
     // into Polygons.
-    
-    // I could add a 'detect conflict' feature in GridSliceAgent that resolves both issues
-    // above, seeing if any direction in possibleDirections leads to one of the two above conflicts.
-    
-    // Alternative progression for the below code: determine three possible next points (rather than
-    // directions), eliminate any that cause conflicts and choose from those that remain.
+        
     
     var possibleDirections = [-1, 1, 0];
-    var possibleNextPoints = possibleDirections.map(function(element){
-    // Go one step further and have the randomiser choose between edges. This way I can apply tests
-    // for permissibility to the candidate edges.
-      return new Point (
+    
+    // Next step: 
+    // possibleDirections.map(function(element){
+    //   element.testForConflicts();
+    // });
+    // Write a testForConflicts function for Edge. 
+    // -- First, test whether the Edge will cross another Edge prior to touching a Point.
+    // -- Second, test whether the Edge will overlap with another edge.
+    
+    var possibleNextEdges = possibleDirections.map(function(element){
+
+      var point2 = new Point (
         axis == 'x' ? point1.x + 1 : Math.min(point1.x + element, window.puzzleGrid.squaresCount['y']),
         axis == 'y' ? point1.y + 1 : Math.min(point1.y + element, window.puzzleGrid.squaresCount['x'])
       );
+      return new Edge(point1, point2);
     });
     var indx = Math.round(Math.random() * 2);
-    var point2 = possibleNextPoints[indx];
+    var newEdge = possibleNextEdges[indx];
     
-    return point2;
+    newEdge.add();
+    return newEdge;
   }
   
-  function placeNewEdge(point1){
-  // I might not need this function. I could add the below code to moveMoveMove.
-    var point2 = defineNextPoint(point1);    
-    return new Edge(point1, point2);
-  };
   
   (function moveMoveMove(refPoint){
-    var newEdge = placeNewEdge(refPoint);
+    var newEdge = defineNextEdge(refPoint);
     if(newEdge.point2[axis] != window.puzzleGrid.squaresCount[axis]){
       return moveMoveMove(newEdge.point2);
     }
@@ -149,10 +158,6 @@ function GridSliceAgent(axis){
       return;
     }
   })(firstPoint);
-  
-  function testForConflicts(point1, point2){
-  // I need a good, solid place to call this function before I write it.
-  }
    
 }
 
