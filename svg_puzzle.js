@@ -41,11 +41,30 @@ function createEdgesFromGridSlices(countX, countY){
 }
 
 function Edge(point1, point2){
+  var _this = this;
   this.point1 = point1;
   this.point2 = point2;
   
   this.add = function(){
     allEdges.push(this);
+  }
+  
+  this.doesItIntersectWithinSquare = function(){
+
+    var conflicts = allEdges.filter(function(element){
+      var currentXs = [_this.point1.x, _this.point2.x];
+      var currentYs = [_this.point1.y, _this.point2.y];
+      var otherXs = [element.point1.x, element.point2.x];
+      var otherYs = [element.point1.y, element.point2.y];
+      
+      return(
+        (currentXs.toString() == otherXs.toString() ||
+        currentXs.toString() == otherXs.reverse().toString()) &&
+        (currentYs.toString() == otherYs.toString() ||
+        currentYs.toString() == otherYs.reverse().toString())
+      );
+    });
+    return conflicts.length > 0;
   }
   
   this.render = function(){
@@ -56,6 +75,12 @@ function Edge(point1, point2){
       this.point2.y * window.puzzleGrid.squareSize
     );
     line.stroke({ width: '1px', color: 'black' });
+    line.node.addEventListener('click', function(){
+      console.log("does this line intersect within a square?", _this.doesItIntersectWithinSquare());
+      console.log(_this.point1.x, _this.point2.x);
+      console.log(_this.point1.y, _this.point2.y);
+      console.log("---------------------");
+    });
   }
   
   this.remove = function(){
@@ -112,27 +137,15 @@ function GridSliceAgent(axis){
   )
     
   function defineNextEdge(point1){
-    // This is a simplistic way of choosing the next possible point.
-    // What's IMPORTANT is that it won't account for a SliceAgent crossing the lines
-    // of another so that an 'X' forms in the middle of a grid box. I'll need some
-    // code to guage the permissibility of each possibleDirection.
+
     
-    // Note that it's possible to have two Edges share the same coordinates on the Grid
-    // (as well as, but not necessarily, the same Point objects). 
-    // I'll need to determine how to remove redundant Edges before I start turning them
-    // into Polygons.
+    // WHAT TO DO NOW: currently this function accurately tests for cases where two Edges
+    // share both X and Y values (i.e. crossing within a square or being identical).
+    // I need something to do for cases in which a line has nowhere to go!
         
     
     var possibleDirections = [-1, 1, 0];
-    
-    // Next step: 
-    // possibleDirections.map(function(element){
-    //   element.testForConflicts();
-    // });
-    // Write a testForConflicts function for Edge. 
-    // -- First, test whether the Edge will cross another Edge prior to touching a Point.
-    // -- Second, test whether the Edge will overlap with another edge.
-    
+           
     var possibleNextEdges = possibleDirections.map(function(element){
 
       var point2 = new Point (
@@ -141,7 +154,14 @@ function GridSliceAgent(axis){
       );
       return new Edge(point1, point2);
     });
-    var indx = Math.round(Math.random() * 2);
+    
+    possibleNextEdges = possibleNextEdges.filter(function(element){
+      return !(element.doesItIntersectWithinSquare());
+    });
+        
+    var indx = Math.round(Math.random() * (possibleNextEdges.length - 1));
+    
+    console.log(possibleNextEdges);
     var newEdge = possibleNextEdges[indx];
     
     newEdge.add();
@@ -172,7 +192,7 @@ function Polygon(){
 
 
 window.onload = function(){
-  window.puzzleGrid = new Grid(50, 50, 7);  
+  window.puzzleGrid = new Grid(50, 50, 15);  
   window.puzzleSpace = SVG('puzzleSpace').size('100%', '100%');
   window.puzzleGrid.render();
   createEdgesFromGridPerimeter();
