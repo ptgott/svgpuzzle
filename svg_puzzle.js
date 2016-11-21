@@ -1,31 +1,38 @@
 var allEdges = [];
 
 function createEdgesFromGridPerimeter(){
-  for(var i = 0; i < window.puzzleGrid.squaresX; i++){
+  for(var i = 0; i < window.puzzleGrid.squaresCount['x']; i++){
     new Edge(
       new Point(i,0),
       new Point(i+1,0)
     );
     new Edge(
-      new Point(i, window.puzzleGrid.squaresY),
-      new Point(i+1,window.puzzleGrid.squaresY)
+      new Point(i, window.puzzleGrid.squaresCount['y']),
+      new Point(i+1,window.puzzleGrid.squaresCount['y'])
     );
   }
   
-  for(var j = 0; j < window.puzzleGrid.squaresY; j++){
+  for(var j = 0; j < window.puzzleGrid.squaresCount['y']; j++){
     new Edge(
       new Point(0,j),
       new Point(0, j+1)
     );
     new Edge(
-      new Point(window.puzzleGrid.squaresX, j),
-      new Point(window.puzzleGrid.squaresX, j+1)
+      new Point(window.puzzleGrid.squaresCount['x'], j),
+      new Point(window.puzzleGrid.squaresCount['x'], j+1)
     );
   }
 
 }
 
 function createEdgesFromGridSlices(countX, countY){
+  for(var i = 0; i < countX; i++){
+    new GridSliceAgent('x');
+  }
+  for(var j = 0; j < countY; j++){
+    new GridSliceAgent('y');
+  } 
+  return;
 }
 
 function Edge(point1, point2){
@@ -44,8 +51,11 @@ function Edge(point1, point2){
 }
 
 function Grid(squaresX, squaresY, squareSizePx){
-  this.squaresX = squaresX;
-  this.squaresY = squaresY;
+  this.squaresCount = {
+    x: squaresX,
+    y: squaresY
+  }
+
   this.squareSize = squareSizePx;
   
   var gridLineQualities = {
@@ -55,23 +65,23 @@ function Grid(squaresX, squaresY, squareSizePx){
   
   this.render = function(){
     var gridLines = window.puzzleSpace.group();
-    for(var i = 0; i < this.squaresY + 1; i++){
+    for(var i = 0; i < this.squaresCount['y'] + 1; i++){
       var line = window.puzzleSpace.line(
         0, 
         i * this.squareSize, 
-        this.squaresX * this.squareSize, 
+        this.squaresCount['x'] * this.squareSize, 
         i * this.squareSize
       );
       gridLines.add(line);
       line.stroke(gridLineQualities);
     }
     
-    for(var j = 0; j < this.squaresX + 1; j++){
+    for(var j = 0; j < this.squaresCount['x'] + 1; j++){
       var line = window.puzzleSpace.line(
         j * this.squareSize, 
         0,
         j * this.squareSize, 
-        this.squaresY * this.squareSize
+        this.squaresCount['y'] * this.squareSize
       );
       gridLines.add(line);
       line.stroke(gridLineQualities);
@@ -80,17 +90,47 @@ function Grid(squaresX, squaresY, squareSizePx){
 }
 
 function GridSliceAgent(axis){
-  // this.startValue = where it'll start on the axis
+  var axis = axis;
+  var firstCoord = Math.round(Math.random() * window.puzzleGrid.squaresCount[axis]);
+  var firstPoint = new Point(
+    axis == 'x' ? 0 : firstCoord,
+    axis == 'y' ? 0 : firstCoord
+  )
+    
+  function getProgressDirection(){
+    // This is a simplistic way of choosing the next possible point.
+    // What's IMPORTANT is that it won't account for a SliceAgent crossing the lines
+    // of another so that an 'X' forms in the middle of a grid box. I'll need some
+    // code to guage the permissibility of each possibleDirection.
+    
+    // BUG TO KILL FIRST: the line will happily drift out of the grid on the inverse
+    // axis of what's specified (a slice travelling across x can drift outside the y axis)
+    
+    var possibleDirections = [-1, 1, 0];
+    var indx = Math.round(Math.random() * 2);
+    return possibleDirections[indx];
+  }
   
-  // var currentEdge = an Edge object, the one last created
+  function placeNewEdge(point1){
+    var dir = getProgressDirection();
+    var point2 = new Point (
+      axis == 'x' ? point1.x + 1 : point1.x + dir,
+      axis == 'y' ? point1.y + 1 : point1.y + dir
+    );
+    
+    return new Edge(point1, point2);
+  }
   
-  // This function, based on the Points within the currentEdge, randomly
-  // determines whether to choose for the next currentEdge a vertical shift, a 45 degree
-  // angle or a horizontal shift, and in what direction.
-  // determineNextEdge = function(){
-  // }
-  // this.axis = ; //define this: left to right or top to bottom?
-//   this.startPoint = ;//define this as a new Point
+  (function moveMoveMove(refPoint){
+    var newEdge = placeNewEdge(refPoint);
+    if(newEdge.point2[axis] != window.puzzleGrid.squaresCount[axis]){
+      return moveMoveMove(newEdge.point2);
+    }
+    else{
+      return;
+    }
+  })(firstPoint);
+   
 }
 
 function Point(x,y){
@@ -109,7 +149,7 @@ window.onload = function(){
   window.puzzleSpace = SVG('puzzleSpace').size('100%', '100%');
   window.puzzleGrid.render();
   createEdgesFromGridPerimeter();
-  createEdgesFromGridSlices(1, 0);
+  createEdgesFromGridSlices(3, 3);
 
   for(var e = 0; e < allEdges.length; e++){
     allEdges[e].render();
