@@ -134,16 +134,37 @@ function GridSliceAgent(axis){
   var firstPoint = new Point(
     axis == 'x' ? 0 : firstCoord,
     axis == 'y' ? 0 : firstCoord
-  )
+  )       
     
-  function defineNextEdge(point1){
-
     
-    // WHAT TO DO NOW: currently this function accurately tests for cases where two Edges
-    // share both X and Y values (i.e. crossing within a square or being identical).
-    // I need something to do for cases in which a line has nowhere to go!
-        
+  function chooseRandomEdge(edgeArray){      
+    var indx = Math.round(Math.random() * (edgeArray.length - 1));
     
+    var newEdge = edgeArray[indx];
+    
+    newEdge.add();
+    return newEdge;
+  }
+  
+  function thereIsNoMoreRoomGivenTo(edge){
+    return edge.point2[axis] == window.puzzleGrid.squaresCount[axis];
+  }
+  
+  
+  (function advanceTheAgent(refPoint){
+    var possibleEdges = possibleNextEdgesFor(refPoint);
+    if(possibleEdges.length > 0){
+      var newEdge = chooseRandomEdge(possibleEdges);
+    }
+    if(newEdge && !thereIsNoMoreRoomGivenTo(newEdge)){
+      return advanceTheAgent(newEdge.point2);
+    }
+    else{
+      return;
+    }
+  })(firstPoint);
+  
+  function possibleNextEdgesFor(point1){
     var possibleDirections = [-1, 1, 0];
            
     var possibleNextEdges = possibleDirections.map(function(element){
@@ -155,29 +176,10 @@ function GridSliceAgent(axis){
       return new Edge(point1, point2);
     });
     
-    possibleNextEdges = possibleNextEdges.filter(function(element){
+    return possibleNextEdges.filter(function(element){
       return !(element.doesItIntersectWithinSquare());
     });
-        
-    var indx = Math.round(Math.random() * (possibleNextEdges.length - 1));
-    
-    console.log(possibleNextEdges);
-    var newEdge = possibleNextEdges[indx];
-    
-    newEdge.add();
-    return newEdge;
   }
-  
-  
-  (function moveMoveMove(refPoint){
-    var newEdge = defineNextEdge(refPoint);
-    if(newEdge.point2[axis] != window.puzzleGrid.squaresCount[axis]){
-      return moveMoveMove(newEdge.point2);
-    }
-    else{
-      return;
-    }
-  })(firstPoint);
    
 }
 
