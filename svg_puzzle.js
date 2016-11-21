@@ -103,8 +103,10 @@ function GridSliceAgent(axis){
     // of another so that an 'X' forms in the middle of a grid box. I'll need some
     // code to guage the permissibility of each possibleDirection.
     
-    // BUG TO KILL FIRST: the line will happily drift out of the grid on the inverse
-    // axis of what's specified (a slice travelling across x can drift outside the y axis)
+    // Note that it's possible to have two Edges share the same coordinates on the Grid
+    // (as well as, but not necessarily, the same Point objects). 
+    // I'll need to determine how to remove redundant Edges before I start turning them
+    // into Polygons.
     
     var possibleDirections = [-1, 1, 0];
     var indx = Math.round(Math.random() * 2);
@@ -114,8 +116,8 @@ function GridSliceAgent(axis){
   function placeNewEdge(point1){
     var dir = getProgressDirection();
     var point2 = new Point (
-      axis == 'x' ? point1.x + 1 : point1.x + dir,
-      axis == 'y' ? point1.y + 1 : point1.y + dir
+      axis == 'x' ? point1.x + 1 : Math.min(point1.x + dir, window.puzzleGrid.squaresCount['y']),
+      axis == 'y' ? point1.y + 1 : Math.min(point1.y + dir, window.puzzleGrid.squaresCount['x'])
     );
     
     return new Edge(point1, point2);
@@ -144,7 +146,6 @@ function Polygon(){
 
 
 window.onload = function(){
-  console.log("the document has loaded!");
   window.puzzleGrid = new Grid(50, 50, 7);  
   window.puzzleSpace = SVG('puzzleSpace').size('100%', '100%');
   window.puzzleGrid.render();
