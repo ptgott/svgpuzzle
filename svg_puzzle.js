@@ -48,6 +48,11 @@ function Edge(point1, point2){
     );
     line.stroke({ width: '1px', color: 'black' });
   }
+  
+  this.remove = function(){
+    allEdges.splice(allEdges.indexOf(this), 1);
+    return;
+  }
 }
 
 function Grid(squaresX, squaresY, squareSizePx){
@@ -97,7 +102,7 @@ function GridSliceAgent(axis){
     axis == 'y' ? 0 : firstCoord
   )
     
-  function getProgressDirection(){
+  function defineNextPoint(point1){
     // This is a simplistic way of choosing the next possible point.
     // What's IMPORTANT is that it won't account for a SliceAgent crossing the lines
     // of another so that an 'X' forms in the middle of a grid box. I'll need some
@@ -108,20 +113,32 @@ function GridSliceAgent(axis){
     // I'll need to determine how to remove redundant Edges before I start turning them
     // into Polygons.
     
+    // I could add a 'detect conflict' feature in GridSliceAgent that resolves both issues
+    // above, seeing if any direction in possibleDirections leads to one of the two above conflicts.
+    
+    // Alternative progression for the below code: determine three possible next points (rather than
+    // directions), eliminate any that cause conflicts and choose from those that remain.
+    
     var possibleDirections = [-1, 1, 0];
+    var possibleNextPoints = possibleDirections.map(function(element){
+    // Go one step further and have the randomiser choose between edges. This way I can apply tests
+    // for permissibility to the candidate edges.
+      return new Point (
+        axis == 'x' ? point1.x + 1 : Math.min(point1.x + element, window.puzzleGrid.squaresCount['y']),
+        axis == 'y' ? point1.y + 1 : Math.min(point1.y + element, window.puzzleGrid.squaresCount['x'])
+      );
+    });
     var indx = Math.round(Math.random() * 2);
-    return possibleDirections[indx];
+    var point2 = possibleNextPoints[indx];
+    
+    return point2;
   }
   
   function placeNewEdge(point1){
-    var dir = getProgressDirection();
-    var point2 = new Point (
-      axis == 'x' ? point1.x + 1 : Math.min(point1.x + dir, window.puzzleGrid.squaresCount['y']),
-      axis == 'y' ? point1.y + 1 : Math.min(point1.y + dir, window.puzzleGrid.squaresCount['x'])
-    );
-    
+  // I might not need this function. I could add the below code to moveMoveMove.
+    var point2 = defineNextPoint(point1);    
     return new Edge(point1, point2);
-  }
+  };
   
   (function moveMoveMove(refPoint){
     var newEdge = placeNewEdge(refPoint);
@@ -132,6 +149,10 @@ function GridSliceAgent(axis){
       return;
     }
   })(firstPoint);
+  
+  function testForConflicts(point1, point2){
+  // I need a good, solid place to call this function before I write it.
+  }
    
 }
 
