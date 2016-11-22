@@ -1,4 +1,5 @@
 var allEdges = [];
+var allPolygons = [];
 
 function createEdgesFromGridPerimeter(){
   for(var i = 0; i < window.puzzleGrid.squaresCount['x']; i++){
@@ -45,9 +46,25 @@ function Edge(point1, point2){
   this.point1 = point1;
   this.point2 = point2;
   
+  this.polygons = [];
+  
+  this.isAnEdge = (function(){
+    var maxY = window.puzzleGrid.squaresCount['y'];
+    var maxX = window.puzzleGrid.squaresCount['x'];
+  
+    return(
+      (_this.point1.y == 0 && _this.point2.y == 0) ||
+      (_this.point1.x == 0 && _this.point2.x == 0) ||
+      (_this.point1.y == maxY && _this.point2.y == maxY) ||
+      (_this.point1.x == maxX && _this.point2.x == maxX)
+    );
+  })();    
+  
+  this.maxPolygons = _this.isAnEdge ? 1 : 2;
+  
   this.add = function(){
     allEdges.push(this);
-  }
+  };
   
   this.doesItIntersectWithinSquare = function(){
 
@@ -67,19 +84,20 @@ function Edge(point1, point2){
     return conflicts.length > 0;
   }
   
-  this.render = function(){
+  this.getDistanceFrom = function(otherAdjoiningEdge){
+    return (this.point2.x - otherAdjoiningEdge.point1.x) + (this.point2.y - otherAdjoiningEdge.point1.y);      
+  }
+    
+  this.render = function(colour){
     var line = window.puzzleSpace.line(
       this.point1.x * window.puzzleGrid.squareSize, 
       this.point1.y * window.puzzleGrid.squareSize, 
       this.point2.x * window.puzzleGrid.squareSize, 
       this.point2.y * window.puzzleGrid.squareSize
     );
-    line.stroke({ width: '1px', color: 'black' });
+    line.stroke({ width: '1px', color: colour });
     line.node.addEventListener('click', function(){
-      console.log("does this line intersect within a square?", _this.doesItIntersectWithinSquare());
-      console.log(_this.point1.x, _this.point2.x);
-      console.log(_this.point1.y, _this.point2.y);
-      console.log("---------------------");
+      console.log(_this);
     });
   }
   
@@ -188,8 +206,49 @@ function Point(x,y){
   this.y = y;
 }
 
-function Polygon(){
-  this.edges = [];
+function Polygon(startEdge){
+  var _this = this;
+  this.edges = [startEdge];
+  this.startEdge = startEdge;
+  allPolygons.push(this);
+  //I still need code to produce a new Polygon for every edge that doesn't belong to one yet
+  (function addNextEdge(refEdge){
+    var adjoiningEdges = allEdges.filter(function(element){
+      return (
+        ((element.point1.x == refEdge.point2.x ) && (element.point1.y == refEdge.point2.y)) ||
+        ((element.point2.x == refEdge.point2.x) && (element.point2.y == refEdge.point2.y))
+      );
+      
+    });
+    
+    var closestAdjoiningEdge = (adjoiningEdges.sort(function(a, b){
+      var distA = refEdge.getDistanceFrom(a);
+      var distB = refEdge.getDistanceFrom(b);
+      if(distA < distB){ return -1; }
+      if(distA > distB){ return 1; }
+      return -1;      
+    }))[0];
+    
+    _this.edges.push(closestAdjoiningEdge);
+    
+    closestAdjoiningEdge.polygons.push(_this);
+    
+    closestAdjoiningEdge.render('red');
+    
+    if((closestAdjoiningEdge.point2.x == _this.startEdge.point1.x) &&
+      (closestAdjoiningEdge.point2.y == _this.startEdge.point1.y)){
+      return;
+    }
+    else{
+      addNextEdge(closestAdjoiningEdge);
+    }
+    
+    
+    // later I'll want to take the points that belong to a Polygon (not Point objects,
+    // as different Edges will have produced different Points for the same coordinates)
+    // and add these to an SVG polygon.
+    
+  })(startEdge);
 }
 
 
@@ -201,7 +260,14 @@ window.onload = function(){
   createEdgesFromGridSlices(3, 3);
 
   for(var e = 0; e < allEdges.length; e++){
-    allEdges[e].render();
+    allEdges[e].render('black');
+    
+    //here's the code for adding the edge to a Polygon
+    // Already this code is broken. Edges at the perimeter of the Grid will have a maximum
+    // of one polygon. FIX THIS with a 'max_polygons' attribute for an Edge.
+//     if(allEdges[e].polygons.length < allEdges[e].maxPolygons ){
+//       new Polygon(allEdges[e]);
+//     }
   }
   
 }
