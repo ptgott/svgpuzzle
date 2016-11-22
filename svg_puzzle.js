@@ -96,7 +96,11 @@ function Edge(point1, point2){
   }
   
   this.getAdjoiningEdges = function(){
-    return allEdges.filter(function(element){
+    var allEdgesButThisOne = allEdges.filter(function(element){
+      return allEdges.indexOf(element) != allEdges.indexOf(_this);
+    });
+  
+    return allEdgesButThisOne.filter(function(element){
       return (
         ((element.point1.x == _this.point2.x ) && (element.point1.y == _this.point2.y)) ||
         ((element.point2.x == _this.point2.x) && (element.point2.y == _this.point2.y))
@@ -272,9 +276,9 @@ window.onload = function(){
     // here's the code for adding the edge to a Polygon. Currently getting
     // 'too much recursiion' error
 
-    if(allEdges[e].polygons.length < allEdges[e].maxPolygons ){
-      new Polygon(allEdges[e]);
-    }
+//     if(allEdges[e].polygons.length < allEdges[e].maxPolygons ){
+//       new Polygon(allEdges[e]);
+//     }
   }
   
 }
