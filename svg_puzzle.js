@@ -66,11 +66,11 @@ function Edge(point1, point2){
     allEdges.push(this);
   };
   
-  this.closestAdjoiningEdge = function(){
-    var adjoiningEdges = this.getAdjoiningEdges();
-    return (adjoiningEdges.sort(function(a, b){
-      var distA = _this.getDistanceFrom(a);
-      var distB = _this.getDistanceFrom(b);
+  this.closestTrailingEdge = function(){
+    var trailingEdges = this.getTrailingEdges();
+    return (trailingEdges.sort(function(a, b){
+      var distA = _this.getDistanceFromTail(a);
+      var distB = _this.getDistanceFromTail(b);
       if(distA < distB){ return -1; }
       if(distA > distB){ return 1; }
       return -1;      
@@ -95,7 +95,7 @@ function Edge(point1, point2){
     return conflicts.length > 0;
   }
   
-  this.getAdjoiningEdges = function(){
+  this.getTrailingEdges = function(){
     var allEdgesButThisOne = allEdges.filter(function(element){
       return allEdges.indexOf(element) != allEdges.indexOf(_this);
     });
@@ -108,8 +108,29 @@ function Edge(point1, point2){
     });
   }
   
-  this.getDistanceFrom = function(otherAdjoiningEdge){
-    return (this.point2.x - otherAdjoiningEdge.point1.x) + (this.point2.y - otherAdjoiningEdge.point1.y);      
+  this.getDistanceFromTail = function(otherTrailingEdge){
+    
+    var pointsArray = [this.point1, this.point2, otherTrailingEdge.point1, otherTrailingEdge.point2];
+      
+    // in pointsArray, there are two elements that are alike. Find which ones these are
+    // and assign them to edgeJoint.
+    
+    for(var i = 0; i < pointsArray.length; i++){
+      var matches = pointsArray.filter(function(element){
+        return pointsArray[i].x == element.x && pointsArray[i].y == element.y;
+      });
+    
+      if(matches.length == 2){
+        var edgeJoint = pointsArray[i];
+      }
+    }
+  
+    var farPoint = [otherTrailingEdge.point1, otherTrailingEdge.point2].filter(function(element){
+      return (element.x != edgeJoint.x || element.y != edgeJoint.y);
+    })[0];
+  
+    return (farPoint.x - edgeJoint.x) + (farPoint.y - edgeJoint.y);
+    
   }
     
   this.render = function(colour){
@@ -122,6 +143,7 @@ function Edge(point1, point2){
     line.stroke({ width: '1px', color: colour });
     line.node.addEventListener('click', function(){
       console.log(_this);
+      console.log("index in all edges", allEdges.indexOf(_this));
     });
   }
   
@@ -235,23 +257,27 @@ function Polygon(startEdge){
   this.edges = [startEdge];
   this.startEdge = startEdge;
   allPolygons.push(this);
-  //I still need code to produce a new Polygon for every edge that doesn't belong to one yet
   (function addNextEdge(refEdge){
+  
+    // Use this script to see if all closestTrailingEdges are incorporated into a Polygon:
+    // for(var i = 0; i < allEdges.length; i++){ (allEdges[i].closestTrailingEdge()).render('red'); }
     
-    var closestAdjoiningEdge = refEdge.closestAdjoiningEdge();
+    // I'm getting an error, 'too much recursion', when I produce a Polygon.
     
-    _this.edges.push(closestAdjoiningEdge);
+    var closestTrailingEdge = refEdge.closestTrailingEdge();
+    
+    _this.edges.push(closestTrailingEdge);
         
-    closestAdjoiningEdge.polygons.push(_this);
+    closestTrailingEdge.polygons.push(_this);
     
-    closestAdjoiningEdge.render('red');
+    closestTrailingEdge.render('red');
     
-    if((closestAdjoiningEdge.point2.x == _this.startEdge.point1.x) &&
-      (closestAdjoiningEdge.point2.y == _this.startEdge.point1.y)){
+    if((closestTrailingEdge.point2.x == _this.startEdge.point1.x) &&
+      (closestTrailingEdge.point2.y == _this.startEdge.point1.y)){
       return;
     }
     else{
-      addNextEdge(closestAdjoiningEdge);
+      addNextEdge(closestTrailingEdge);
     }
     
     
@@ -273,8 +299,6 @@ window.onload = function(){
   for(var e = 0; e < allEdges.length; e++){
     allEdges[e].render('black');
     
-    // here's the code for adding the edge to a Polygon. Currently getting
-    // 'too much recursiion' error
 
 //     if(allEdges[e].polygons.length < allEdges[e].maxPolygons ){
 //       new Polygon(allEdges[e]);
