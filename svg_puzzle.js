@@ -48,7 +48,7 @@ function Edge(point1, point2){
   
   this.polygons = [];
   
-  this.isAnEdge = (function(){
+  this.isAtPerimeter = (function(){
     var maxY = window.puzzleGrid.squaresCount['y'];
     var maxX = window.puzzleGrid.squaresCount['x'];
   
@@ -60,11 +60,22 @@ function Edge(point1, point2){
     );
   })();    
   
-  this.maxPolygons = _this.isAnEdge ? 1 : 2;
+  this.maxPolygons = _this.isAtPerimeter ? 1 : 2;
   
   this.add = function(){
     allEdges.push(this);
   };
+  
+  this.closestAdjoiningEdge = function(){
+    var adjoiningEdges = this.getAdjoiningEdges();
+    return (adjoiningEdges.sort(function(a, b){
+      var distA = _this.getDistanceFrom(a);
+      var distB = _this.getDistanceFrom(b);
+      if(distA < distB){ return -1; }
+      if(distA > distB){ return 1; }
+      return -1;      
+    }))[0];
+  }
   
   this.doesItIntersectWithinSquare = function(){
 
@@ -82,6 +93,15 @@ function Edge(point1, point2){
       );
     });
     return conflicts.length > 0;
+  }
+  
+  this.getAdjoiningEdges = function(){
+    return allEdges.filter(function(element){
+      return (
+        ((element.point1.x == _this.point2.x ) && (element.point1.y == _this.point2.y)) ||
+        ((element.point2.x == _this.point2.x) && (element.point2.y == _this.point2.y))
+      );
+    });
   }
   
   this.getDistanceFrom = function(otherAdjoiningEdge){
@@ -213,24 +233,11 @@ function Polygon(startEdge){
   allPolygons.push(this);
   //I still need code to produce a new Polygon for every edge that doesn't belong to one yet
   (function addNextEdge(refEdge){
-    var adjoiningEdges = allEdges.filter(function(element){
-      return (
-        ((element.point1.x == refEdge.point2.x ) && (element.point1.y == refEdge.point2.y)) ||
-        ((element.point2.x == refEdge.point2.x) && (element.point2.y == refEdge.point2.y))
-      );
-      
-    });
     
-    var closestAdjoiningEdge = (adjoiningEdges.sort(function(a, b){
-      var distA = refEdge.getDistanceFrom(a);
-      var distB = refEdge.getDistanceFrom(b);
-      if(distA < distB){ return -1; }
-      if(distA > distB){ return 1; }
-      return -1;      
-    }))[0];
+    var closestAdjoiningEdge = refEdge.closestAdjoiningEdge();
     
     _this.edges.push(closestAdjoiningEdge);
-    
+        
     closestAdjoiningEdge.polygons.push(_this);
     
     closestAdjoiningEdge.render('red');
@@ -262,12 +269,12 @@ window.onload = function(){
   for(var e = 0; e < allEdges.length; e++){
     allEdges[e].render('black');
     
-    //here's the code for adding the edge to a Polygon
-    // Already this code is broken. Edges at the perimeter of the Grid will have a maximum
-    // of one polygon. FIX THIS with a 'max_polygons' attribute for an Edge.
-//     if(allEdges[e].polygons.length < allEdges[e].maxPolygons ){
-//       new Polygon(allEdges[e]);
-//     }
+    // here's the code for adding the edge to a Polygon. Currently getting
+    // 'too much recursiion' error
+
+    if(allEdges[e].polygons.length < allEdges[e].maxPolygons ){
+      new Polygon(allEdges[e]);
+    }
   }
   
 }
