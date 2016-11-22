@@ -65,18 +65,7 @@ function Edge(point1, point2){
   this.add = function(){
     allEdges.push(this);
   };
-  
-  this.closestTrailingEdge = function(){
-    var trailingEdges = this.getTrailingEdges();
-    return (trailingEdges.sort(function(a, b){
-      var distA = _this.getDistanceFromTail(a);
-      var distB = _this.getDistanceFromTail(b);
-      if(distA < distB){ return -1; }
-      if(distA > distB){ return 1; }
-      return -1;      
-    }))[0];
-  }
-  
+    
   this.doesItIntersectWithinSquare = function(){
 
     var conflicts = allEdges.filter(function(element){
@@ -109,7 +98,7 @@ function Edge(point1, point2){
   }
   
   this.getDistanceFromTail = function(otherTrailingEdge){
-    
+   
     var pointsArray = [this.point1, this.point2, otherTrailingEdge.point1, otherTrailingEdge.point2];
       
     // in pointsArray, there are two elements that are alike. Find which ones these are
@@ -259,25 +248,61 @@ function Polygon(startEdge){
   allPolygons.push(this);
   (function addNextEdge(refEdge){
   
-    // Use this script to see if all closestTrailingEdges are incorporated into a Polygon:
-    // for(var i = 0; i < allEdges.length; i++){ (allEdges[i].closestTrailingEdge()).render('red'); }
-    
-    // I'm getting an error, 'too much recursion', when I produce a Polygon.
-    
-    var closestTrailingEdge = refEdge.closestTrailingEdge();
-    
-    _this.edges.push(closestTrailingEdge);
+    var trailingEdges = refEdge.getTrailingEdges();
+     
+    // The error I'm getting: 'otherTrailingEdge' within 'getDistanceFromTail' is undefined.
+            
+    var sortedTrailingEdges = (trailingEdges.sort(function(a, b){
+      var distA = refEdge.getDistanceFromTail(a);
+      var distB = refEdge.getDistanceFromTail(b);
+      if(distA < distB){ return -1; }
+      if(distA > distB){ return 1; }
+      return -1;      
+    }));
         
-    closestTrailingEdge.polygons.push(_this);
+    function closestTrailingEdgeIsATie(){
+      var nextIndex = Math.min(sortedTrailingEdges.length - 1, 0);
+      return refEdge.getDistanceFromTail(sortedTrailingEdges[0]) ==
+      refEdge.getDistanceFromTail(sortedTrailingEdges[nextIndex])
+    }
+        
+    // this function at the last commit assumed that the program will select the closestTrailingEdge
+    // to be the annointed Edge. This isn't always true! There are plenty of trailing edges
+    // that are equally far from the leading edge.
     
-    closestTrailingEdge.render('red');
+    // This new code attempts to break ties between equally distant trailing edges
+    // by deciding on the basis of how many Polygons the edges are included within.
     
-    if((closestTrailingEdge.point2.x == _this.startEdge.point1.x) &&
-      (closestTrailingEdge.point2.y == _this.startEdge.point1.y)){
+    // Once again, Polygons seem to recruit Edges with no coherent order.
+    
+    // Why not find a new way to implement my Polygon creation algorithm?
+    
+    if(!closestTrailingEdgeIsATie()){
+      var preferredEdge = sortedTrailingEdges[0];
+    }
+    else{
+      var leastIncludedEdge = (refEdge.getTrailingEdges().sort(function(a, b){
+        var inclusionA = a.polygons.length/a.maxPolygons;
+        var inclusionB = b.polygons.length/b.maxPolygons;
+        if(inclusionA < inclusionB){ return -1; }
+        if(inclusionA > inclusionB){ return 1; }
+        return -1;
+      }))[0];
+      preferredEdge = leastIncludedEdge;
+    }
+    
+    _this.edges.push(preferredEdge);
+        
+    preferredEdge.polygons.push(_this);
+    
+    preferredEdge.render('red');
+    
+    if((preferredEdge.point2.x == _this.startEdge.point1.x) &&
+      (preferredEdge.point2.y == _this.startEdge.point1.y)){
       return;
     }
     else{
-      addNextEdge(closestTrailingEdge);
+      addNextEdge(preferredEdge);
     }
     
     
