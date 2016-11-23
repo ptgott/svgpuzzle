@@ -41,6 +41,38 @@ function createEdgesFromGridSlices(countX, countY){
   return;
 }
 
+function Direction(xVal, yVal){  
+// The intention is for xVal and yVal to be 0, -1 or 1. Perhaps later add code here
+// that throws an error if the arguments do not sit within these values.
+  this.xVal = xVal;
+  this.yVal = yVal;
+      
+  // == sorting Edges by how sharply they turn right: criteria ==
+  // -- travelling on x axis only = opposite dir for same axis, same dir for other axis
+  //    positive on x axis = lowest x and highest y
+  //    negative on x axis = highest x and lowest y
+  //
+  // -- travelling on the y axis only = same dir for other axis, same dir for same axis
+  //    positive on y axis = highest x and highest y
+  //    negative on y axis =  lowest x and lowest y
+  //
+  // -- travelling on both x and y axis
+  //    positive x, positive y: lowest x, lowest y
+  //    positive x, negative y: lowest x, highest y
+  //    negative x, positive y: highest x, lowest y
+  //    negative x, negative y: highest x, highest y
+  
+  // == The conclusion ==
+  // I'm not going to venture to define a more eloquent function than the table I've
+  // laid out above. Simply implement the table to determine which xs and ys to sort to the
+  // lowest index of an array of xs and ys!
+  
+  this.rightmostTurn(edgeArray){
+  
+  }
+
+}
+
 function Edge(point1, point2){
   var _this = this;
   this.point1 = point1;
@@ -84,20 +116,21 @@ function Edge(point1, point2){
     return conflicts.length > 0;
   }
   
-  this.getTrailingEdges = function(){
+  this.edgesThatMeetAtPoint = function(point){
     var allEdgesButThisOne = allEdges.filter(function(element){
       return allEdges.indexOf(element) != allEdges.indexOf(_this);
     });
   
     return allEdgesButThisOne.filter(function(element){
       return (
-        ((element.point1.x == _this.point2.x ) && (element.point1.y == _this.point2.y)) ||
-        ((element.point2.x == _this.point2.x) && (element.point2.y == _this.point2.y))
+        ((element.point1.x == _this[point].x ) && (element.point1.y == _this[point].y)) ||
+        ((element.point2.x == _this.[point].x) && (element.point2.y == _this.[point].y))
       );
     });
   }
   
   this.getDistanceFromTail = function(otherTrailingEdge){
+    // There's a good chance I won't need this method in the new version of Polygon.
    
     var pointsArray = [this.point1, this.point2, otherTrailingEdge.point1, otherTrailingEdge.point2];
       
@@ -241,76 +274,64 @@ function Point(x,y){
   this.y = y;
 }
 
-function Polygon(startEdge){
+function PolygonAgent(startEdge){
   var _this = this;
   this.edges = [startEdge];
   this.startEdge = startEdge;
-  allPolygons.push(this);
-  (function addNextEdge(refEdge){
+  this.currentEdge = startEdge;
   
-    var trailingEdges = refEdge.getTrailingEdges();
+  this.currentDirection = new Direction(
+    startEdge.point2.x - startEdge.point1.x,
+    startEdge.point2.y - startEdge.point1.y
+  );
+
+  
+  var clockWiseTurns = {
+  // Add this to Direction and remove it here: an object literal of right turns from
+  // any given direction (i.e. based on whether x and y are positive or negative).
+  };
+  
+  this.getCurrentDirection = function(){
+    // The agent assumes it's moving clockwise. For an arbitrary Edge, it's not clear what
+    // clockwise movement means for the agent's directions. Why not pick a direction arbitrarily?
+  }
+  
+  this.getForwardPoint = function(){
+
+    
+  }
+
+  
+
+  var trailingEdges = refEdge.edgesThatMeetAtPoint(forwardPoint);
      
-    // The error I'm getting: 'otherTrailingEdge' within 'getDistanceFromTail' is undefined.
+  // Sort trailingEdges based on which one is the sharpest right turn, then add that Edge.
             
-    var sortedTrailingEdges = (trailingEdges.sort(function(a, b){
-      var distA = refEdge.getDistanceFromTail(a);
-      var distB = refEdge.getDistanceFromTail(b);
-      if(distA < distB){ return -1; }
-      if(distA > distB){ return 1; }
-      return -1;      
-    }));
-        
-    function closestTrailingEdgeIsATie(){
-      var nextIndex = Math.min(sortedTrailingEdges.length - 1, 0);
-      return refEdge.getDistanceFromTail(sortedTrailingEdges[0]) ==
-      refEdge.getDistanceFromTail(sortedTrailingEdges[nextIndex])
-    }
-        
-    // this function at the last commit assumed that the program will select the closestTrailingEdge
-    // to be the annointed Edge. This isn't always true! There are plenty of trailing edges
-    // that are equally far from the leading edge.
     
-    // This new code attempts to break ties between equally distant trailing edges
-    // by deciding on the basis of how many Polygons the edges are included within.
-    
-    // Once again, Polygons seem to recruit Edges with no coherent order.
-    
-    // Why not find a new way to implement my Polygon creation algorithm?
-    
-    if(!closestTrailingEdgeIsATie()){
-      var preferredEdge = sortedTrailingEdges[0];
-    }
-    else{
-      var leastIncludedEdge = (refEdge.getTrailingEdges().sort(function(a, b){
-        var inclusionA = a.polygons.length/a.maxPolygons;
-        var inclusionB = b.polygons.length/b.maxPolygons;
-        if(inclusionA < inclusionB){ return -1; }
-        if(inclusionA > inclusionB){ return 1; }
-        return -1;
-      }))[0];
-      preferredEdge = leastIncludedEdge;
-    }
-    
-    _this.edges.push(preferredEdge);
-        
-    preferredEdge.polygons.push(_this);
-    
-    preferredEdge.render('red');
-    
-    if((preferredEdge.point2.x == _this.startEdge.point1.x) &&
-      (preferredEdge.point2.y == _this.startEdge.point1.y)){
-      return;
-    }
-    else{
-      addNextEdge(preferredEdge);
-    }
+  // Code for selecting and adding an Edge is below. It's all wrong, so re-write.
+//   _this.edges.push(preferredEdge);
+//         
+//   preferredEdge.polygons.push(_this);
+//     
+//   preferredEdge.render('red');
+//     
+//   if((preferredEdge.point2.x == _this.startEdge.point1.x) &&
+//     (preferredEdge.point2.y == _this.startEdge.point1.y)){
+//     return;
+//   }
+//   else{
+//     addNextEdge(preferredEdge);
+//   }
+
+    // Once I add an Edge, change currentEdge and currentDirection
+
+    // end by producing a Polygon object from this.edges.
     
     
     // later I'll want to take the points that belong to a Polygon (not Point objects,
     // as different Edges will have produced different Points for the same coordinates)
     // and add these to an SVG polygon.
     
-  })(startEdge);
 }
 
 
@@ -326,7 +347,7 @@ window.onload = function(){
     
 
 //     if(allEdges[e].polygons.length < allEdges[e].maxPolygons ){
-//       new Polygon(allEdges[e]);
+//       new PolygonAgent(allEdges[e]);
 //     }
   }
   
