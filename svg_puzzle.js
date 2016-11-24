@@ -46,29 +46,55 @@ function Direction(xVal, yVal){
 // that throws an error if the arguments do not sit within these values.
   this.xVal = xVal;
   this.yVal = yVal;
-      
-  // == sorting Edges by how sharply they turn right: criteria ==
-  // -- travelling on x axis only = opposite dir for same axis, same dir for other axis
-  //    positive on x axis = lowest x and highest y
-  //    negative on x axis = highest x and lowest y
-  //
-  // -- travelling on the y axis only = same dir for other axis, same dir for same axis
-  //    positive on y axis = highest x and highest y
-  //    negative on y axis =  lowest x and lowest y
-  //
-  // -- travelling on both x and y axis
-  //    positive x, positive y: lowest x, lowest y
-  //    positive x, negative y: lowest x, highest y
-  //    negative x, positive y: highest x, lowest y
-  //    negative x, negative y: highest x, highest y
   
-  // == The conclusion ==
-  // I'm not going to venture to define a more eloquent function than the table I've
-  // laid out above. Simply implement the table to determine which xs and ys to sort to the
-  // lowest index of an array of xs and ys!
+  this.rightMostTurn = function(){
+  // Let's face it: The functionality of this function comes from the fact that I gave up
+  // on defining a relationship between the direction of travel on the x and y axis
+  // and a sharp right turn on a web browser's upside-down coordinate system. Now that I've
+  // got it laid out neatly as an object literal, I can come bakc later and
+  // refactor it into a nice mathematical function.
   
-  this.rightmostTurn(edgeArray){
-  
+  // In 'turns', a value of -1 means lowest and 1 means highest. I'll later use these
+  // values to fill in a sort function for a given point's forking Edges. We want the agent
+  // to make the sharpest right turn she can at any given junction.
+    var turnToTest = [this.xVal, this.yVal].toString();
+    var turns = {
+      "1,0": {
+        x: -1,
+        y: 1
+      },
+      "-1,0": {
+        x: 1,
+        y: -1
+      },
+      "0,1": {
+        x: -1,
+        y: -1
+      },
+      "0,-1": {
+        x: 1,
+        y: 1
+      },
+      "1,1": {
+        x: -1,
+        y: -1
+      }.
+      "1,-1": {
+        x: -1,
+        y: 1
+      },
+      "-1,1": {
+        x: 1,
+        y: -1
+      }
+      "-1,-1": {
+        x: 1,
+        y: 1
+      }      
+    } 
+    
+    return turns[turnToTest];
+
   }
 
 }
@@ -284,49 +310,90 @@ function PolygonAgent(startEdge){
     startEdge.point2.x - startEdge.point1.x,
     startEdge.point2.y - startEdge.point1.y
   );
-
   
-  var clockWiseTurns = {
-  // Add this to Direction and remove it here: an object literal of right turns from
-  // any given direction (i.e. based on whether x and y are positive or negative).
-  };
   
-  this.getCurrentDirection = function(){
-    // The agent assumes it's moving clockwise. For an arbitrary Edge, it's not clear what
-    // clockwise movement means for the agent's directions. Why not pick a direction arbitrarily?
-  }
+  this.forwardPoint = function(){
+  // This is the point ahead of the imaginary agent, who sits on currentEdge.
   
-  this.getForwardPoint = function(){
-
+    var points = [this.currentEdge.point1, this.currentEdge.point2];
+    var cd = this.currentDirection; 
+    
+    return points.sort(function(a,b){
+      if(((a.x * cd.xVal)  >= (b.x * cd.xVal)) && ((a.y * cd.yVal) >= (b.y * cd.yVal))){
+        return -1;
+      }
+      else{
+        return 1;
+      }
+    })[0];
     
   }
-
   
 
-  var trailingEdges = refEdge.edgesThatMeetAtPoint(forwardPoint);
-     
-  // Sort trailingEdges based on which one is the sharpest right turn, then add that Edge.
-            
+  this.trailingEdges = function(){
+    return refEdge.edgesThatMeetAtPoint(this.forwardPoint);
+  }
+  
+  this.nextEdge = function(){
+    var trailingEdges = this.trailingEdges();
+    var rightTurnDirection = this.currentDirection.rightMostTurn();
     
-  // Code for selecting and adding an Edge is below. It's all wrong, so re-write.
-//   _this.edges.push(preferredEdge);
-//         
-//   preferredEdge.polygons.push(_this);
-//     
-//   preferredEdge.render('red');
-//     
-//   if((preferredEdge.point2.x == _this.startEdge.point1.x) &&
-//     (preferredEdge.point2.y == _this.startEdge.point1.y)){
-//     return;
-//   }
-//   else{
-//     addNextEdge(preferredEdge);
-//   }
-
-    // Once I add an Edge, change currentEdge and currentDirection
-
-    // end by producing a Polygon object from this.edges.
+    // Map trailingEdges into an array of points other than the forwardPoint where the
+    // trailingEdges meet.
+    var distalPoints = trailingEdges.map(function(edg){
+      return ([point1, point2].filter(function(pt){
+        return (pt.x != forwardPoint.x) && (pt.y != forwardPoint.y);
+      }))[0];
+    });
     
+    // sort the distal points by how sharp of a right turn they present
+    
+    var rightMostPoint = (distalPoints.sort(function(a,b){
+      if(
+        ((a.x * rightTurnDirection.dirX) >= (b.x * rightTurnDirection.dirX)) &&
+        ((a.y * rightTurnDirection.dirY) >= (b.y * rightTurnDirection.dirY))
+      ){
+        return -1;
+      }
+      else{
+        return 1;
+      }
+    }))[0];
+    
+    // Since distalPoints loses the Edge that the points belong to, choose an Edge
+    // on the basis of the rightmost distal point.
+    
+    var chosenEdge = (trailingEdges.filter(function(edge){
+      return (
+        ((edge.point1.x == rightMostPoint.x) && (edge.point2.y == rightMostPoint.y)) ||
+        ((edge.point2.x == rightMostPoint.x) && (edge.point2.y == rightMostPoint.y))
+      );
+    }))[0];
+    
+    return chosenEdge;
+  }
+  
+  this.activate = function(){
+    var nextEdge = this.nextEdge();
+    if(nextEdge.equals(this.startEdge)){
+      console.log("There should be a new Polygon now!!");
+      // insert code for a new Polygon here
+    }
+    else{
+      var oldForwardPoint = this.forwardPoint();
+      nextEdge.render();
+      this.edges.push(nextEdge);
+      this.currentEdge = nextEdge;
+      var newForwardPoint = this.forwardPoint();
+      this.currentDirection = new Direction(
+        newForwardPoint.x - oldForwardPoint.x,
+        newForwardPoint.y - oldForwardPoint.y
+      );
+      _this.activate();
+    }
+  }            
+
+    // end by producing a Polygon object from this.edges.    
     
     // later I'll want to take the points that belong to a Polygon (not Point objects,
     // as different Edges will have produced different Points for the same coordinates)
@@ -344,11 +411,6 @@ window.onload = function(){
 
   for(var e = 0; e < allEdges.length; e++){
     allEdges[e].render('black');
-    
-
-//     if(allEdges[e].polygons.length < allEdges[e].maxPolygons ){
-//       new PolygonAgent(allEdges[e]);
-//     }
   }
   
 }
