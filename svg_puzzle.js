@@ -323,6 +323,9 @@ function PolygonAgent(startEdge){
   this.currentEdge = startEdge;
   
   this.currentDirection = new Direction(
+  // **ISSUE**: the difference between points does not automatically set the Agent in the right direction.
+  // In fact, it could easily bring about a case in which there is no clockwise turn available.
+  // Why not start at a point, rather than an edge? 
     startEdge.point2.x - startEdge.point1.x,
     startEdge.point2.y - startEdge.point1.y
   );
@@ -348,22 +351,20 @@ function PolygonAgent(startEdge){
 
   this.trailingEdges = function(){
     var forwardPoint = this.forwardPoint();
-    console.log("this.startEdge in this.trailingEdges", this.startEdge);
-    console.log(
-      "this.startEdge.edgesThatMeetAtPoint(forwardPoint)", 
-      this.startEdge.edgesThatMeetAtPoint(forwardPoint)
-    );
-    return this.startEdge.edgesThatMeetAtPoint(forwardPoint);
+    return this.currentEdge.edgesThatMeetAtPoint(forwardPoint);
   }
   
   this.nextEdge = function(){
+  
+  // ** ISSUE ** after a right turn from, say, (6,0) to (6,1), currentDirection becomes (0,0)
+  // and forwardPoint becomes (6,0). It should be (6,1).
+  
     var forwardPoint = this.forwardPoint();
     var trailingEdges = this.trailingEdges();
     
-    console.log("forwardPoint in this.nextEdge", forwardPoint);
-    console.log("trailingEdges in this.nextEdge", trailingEdges);
-    console.log("trailingEdges at top of this.nextEdge", trailingEdges);
-    
+    console.log("forwardPoint (of currentEdge) in this.nextEdge", forwardPoint);
+    console.log("trailingEdges in this.nextEdge", trailingEdges);  
+    console.log("currentDirection in this.nextEdge", this.currentDirection);  
     var rightTurnDirection = this.currentDirection.rightMostTurn();
     
     console.log("rightTurnDirection in this.nextEdge", rightTurnDirection);
@@ -371,19 +372,13 @@ function PolygonAgent(startEdge){
     // Map trailingEdges into an array of points other than the forwardPoint where the
     // trailingEdges meet.
     var distalPoints = trailingEdges.map(function(edg){
-      console.log("edg in trailingEdges.map in distalPoints", edg);
       var distalPointsInEdge = [edg.point1, edg.point2].filter(function(pt){
         return (pt.x != forwardPoint.x) || (pt.y != forwardPoint.y);
       });
       var distalPointInEdge = distalPointsInEdge[0];
-      console.log("distalPointsInEdge", distalPointsInEdge);
-      console.log("distalPointInEdge", distalPointInEdge);
       return distalPointInEdge;
     });
-    
-    
-    console.log("distalPoints", distalPoints);
-    
+        
     // sort the distal points by how sharp of a right turn they present
     var rightMostPoint = (distalPoints.sort(function(a,b){
       if(
@@ -413,8 +408,11 @@ function PolygonAgent(startEdge){
   
   this.activate = function(){
     var nextEdge = this.nextEdge();
-    console.log("nextEdge at top of this.activate", nextEdge);
-    
+    console.log("=====AND THE CALCULATED NEXT EDGE IS:========");
+    console.log("allEdges.indexOf(this.nextEdge)", allEdges.indexOf(nextEdge));
+    console.log(nextEdge);
+    console.log("----------------------------------");
+        
     if(nextEdge.equals(this.startEdge)){ 
       console.log("There should be a new Polygon now!!");
       // insert code for a new Polygon here
@@ -424,8 +422,20 @@ function PolygonAgent(startEdge){
       nextEdge.render("red");
       this.edges.push(nextEdge);
       this.currentEdge = nextEdge;
+      
+      // **ISSUE** there are moments in which oldForwardPoint and newForwardPoint are equal.
+      // What's concerning is that forwardPoint() depends on current direction,
+      // yet calculating current direction depends on calculating the forward point.
+      // Let's rethink.
+      // You can't calculate a new forward point with an old direction in the case of a right turn.
+      // What you can use is the newEdge itself.
+      
       var newForwardPoint = this.forwardPoint();
+      console.log("=====SETTING UP THE NEXT EDGE FROM THE CURRENT EDGE=====");
+      console.log("oldForwardPoint at end of this.activate", oldForwardPoint);
+      console.log("newForwardPoint at end of this.activate", newForwardPoint);
       this.currentDirection = new Direction(
+      
         newForwardPoint.x - oldForwardPoint.x,
         newForwardPoint.y - oldForwardPoint.y
       );
