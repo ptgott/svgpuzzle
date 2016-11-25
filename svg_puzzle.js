@@ -78,7 +78,7 @@ function Direction(xVal, yVal){
       "1,1": {
         x: -1,
         y: -1
-      }.
+      },
       "1,-1": {
         x: -1,
         y: 1
@@ -86,7 +86,7 @@ function Direction(xVal, yVal){
       "-1,1": {
         x: 1,
         y: -1
-      }
+      },
       "-1,-1": {
         x: 1,
         y: 1
@@ -143,16 +143,32 @@ function Edge(point1, point2){
   }
   
   this.edgesThatMeetAtPoint = function(point){
+  // This should really be a method of Point, as it only refers to this Edge once.
+  // Make sure I'm defining and referring to Points consistently enough that I can do this
+  // reliably.
+  
     var allEdgesButThisOne = allEdges.filter(function(element){
       return allEdges.indexOf(element) != allEdges.indexOf(_this);
     });
   
     return allEdgesButThisOne.filter(function(element){
       return (
-        ((element.point1.x == _this[point].x ) && (element.point1.y == _this[point].y)) ||
-        ((element.point2.x == _this.[point].x) && (element.point2.y == _this.[point].y))
+        ((element.point1.x == point.x ) && (element.point1.y == point.y)) ||
+        ((element.point2.x == point.x) && (element.point2.y == point.y))
       );
     });
+  }
+  
+  this.equals = function(otherEdge){
+    var thesePoints = [this.point1, this.point2];
+    var otherPoints = [otherEdge.point1, otherEdge.point2];
+    
+    return (thesePoints.filter(function(pnt1){
+      return otherPoints.some(function(pnt2){
+        pnt2.x == pnt1.x && pnt2.y == pnt1.y;
+      });
+    })).length == 2;
+    
   }
   
   this.getDistanceFromTail = function(otherTrailingEdge){
@@ -331,23 +347,44 @@ function PolygonAgent(startEdge){
   
 
   this.trailingEdges = function(){
-    return refEdge.edgesThatMeetAtPoint(this.forwardPoint);
+    var forwardPoint = this.forwardPoint();
+    console.log("this.startEdge in this.trailingEdges", this.startEdge);
+    console.log(
+      "this.startEdge.edgesThatMeetAtPoint(forwardPoint)", 
+      this.startEdge.edgesThatMeetAtPoint(forwardPoint)
+    );
+    return this.startEdge.edgesThatMeetAtPoint(forwardPoint);
   }
   
   this.nextEdge = function(){
+    var forwardPoint = this.forwardPoint();
     var trailingEdges = this.trailingEdges();
+    
+    console.log("forwardPoint in this.nextEdge", forwardPoint);
+    console.log("trailingEdges in this.nextEdge", trailingEdges);
+    console.log("trailingEdges at top of this.nextEdge", trailingEdges);
+    
     var rightTurnDirection = this.currentDirection.rightMostTurn();
+    
+    console.log("rightTurnDirection in this.nextEdge", rightTurnDirection);
     
     // Map trailingEdges into an array of points other than the forwardPoint where the
     // trailingEdges meet.
     var distalPoints = trailingEdges.map(function(edg){
-      return ([point1, point2].filter(function(pt){
-        return (pt.x != forwardPoint.x) && (pt.y != forwardPoint.y);
-      }))[0];
+      console.log("edg in trailingEdges.map in distalPoints", edg);
+      var distalPointsInEdge = [edg.point1, edg.point2].filter(function(pt){
+        return (pt.x != forwardPoint.x) || (pt.y != forwardPoint.y);
+      });
+      var distalPointInEdge = distalPointsInEdge[0];
+      console.log("distalPointsInEdge", distalPointsInEdge);
+      console.log("distalPointInEdge", distalPointInEdge);
+      return distalPointInEdge;
     });
     
-    // sort the distal points by how sharp of a right turn they present
     
+    console.log("distalPoints", distalPoints);
+    
+    // sort the distal points by how sharp of a right turn they present
     var rightMostPoint = (distalPoints.sort(function(a,b){
       if(
         ((a.x * rightTurnDirection.dirX) >= (b.x * rightTurnDirection.dirX)) &&
@@ -360,9 +397,10 @@ function PolygonAgent(startEdge){
       }
     }))[0];
     
+    console.log("rightMostPoint", rightMostPoint);
+    
     // Since distalPoints loses the Edge that the points belong to, choose an Edge
     // on the basis of the rightmost distal point.
-    
     var chosenEdge = (trailingEdges.filter(function(edge){
       return (
         ((edge.point1.x == rightMostPoint.x) && (edge.point2.y == rightMostPoint.y)) ||
@@ -375,13 +413,15 @@ function PolygonAgent(startEdge){
   
   this.activate = function(){
     var nextEdge = this.nextEdge();
-    if(nextEdge.equals(this.startEdge)){
+    console.log("nextEdge at top of this.activate", nextEdge);
+    
+    if(nextEdge.equals(this.startEdge)){ 
       console.log("There should be a new Polygon now!!");
       // insert code for a new Polygon here
     }
     else{
       var oldForwardPoint = this.forwardPoint();
-      nextEdge.render();
+      nextEdge.render("red");
       this.edges.push(nextEdge);
       this.currentEdge = nextEdge;
       var newForwardPoint = this.forwardPoint();
@@ -411,6 +451,12 @@ window.onload = function(){
 
   for(var e = 0; e < allEdges.length; e++){
     allEdges[e].render('black');
+  }
+  
+  for(var i = 0; i < allEdges.length; i++){
+    if(allEdges[i].polygons < allEdges[i].maxPolygons){
+      (new PolygonAgent(allEdges[i])).activate();
+    }
   }
   
 }
