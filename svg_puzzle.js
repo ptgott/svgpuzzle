@@ -325,8 +325,12 @@ function PolygonAgent(startEdge){
   this.currentDirection = new Direction(
   // **ISSUE**: the difference between points does not automatically set the Agent in the right direction.
   // In fact, it could easily bring about a case in which there is no clockwise turn available.
-  // Why not start at a point, rather than an edge? 
-    startEdge.point2.x - startEdge.point1.x,
+  
+  // INSTRUCTIONS FOR NEXT TIME: I need a way to define forwardPoint without the use of currentDirection.
+  // In the current code, I first define forwardPoints (old and new) using a forwardPoint method
+  // that incorporates currentDirection. **Yet this currentDirection is always outdated**.
+  // Instead, to define forwardPoint, I can use code already within nextEdge: the distalPoint
+  // of the chosen Edge becomes the new forwardPoint. From there, I can calculate a new direction.
     startEdge.point2.y - startEdge.point1.y
   );
   
