@@ -298,7 +298,7 @@ function PolygonAgent(startEdge){
   this.currentEdge = startEdge;
   
   this.currentDirection = new Direction(
-
+    startEdge.point2.x - startEdge.point1.x,
     startEdge.point2.y - startEdge.point1.y
   );
   
@@ -349,11 +349,14 @@ function PolygonAgent(startEdge){
     });
         
     // sort the distal points by how sharp of a right turn they present
-    // ** ISSUE ** for some reason, this function is not sorting distal points as intended.
-    // One issue may be the presence of the '&&' operator. 
-    // I can sort numbers in ascending order with the function 'a - b', without doing this/
-    // explicitly returning 1/-1 nonsense.
-    // To do this, I could sort by x then sort by y, i.e. two different sorts, then choose the first.
+    // ** ISSUE ** with sorting distal points
+    // If no distal point satisfies the move from the forwardPoint in the rightMostDirection
+    // exactly, it's totally possible that a distalPoint will satisfy only one of the 'x'
+    // or 'y' criteria, moving to the head of the distalPoints array, while not actually being a right
+    // turn.
+    // This appears to be the case even if I remove the '0' values from the right turns
+    // object literal.
+
     var rightMostPoint = function(){
       console.log("distalPoints before sort", distalPoints);
       var distalPointsByX = distalPoints.sort(function(a,b){
@@ -393,7 +396,9 @@ function PolygonAgent(startEdge){
     console.log(nextEdge);
     console.log("----------------------------------");
         
-    if(nextEdge.equals(this.startEdge)){ 
+//  Remove first operand of '||' operator below once I get PolygonAgent to define a Polygon
+//  fully.        
+    if(this.edges.length > 50 || nextEdge.equals(this.startEdge)){ 
       console.log("There should be a new Polygon now!!");
       // insert code for a new Polygon here
     }
@@ -435,11 +440,14 @@ window.onload = function(){
   for(var e = 0; e < allEdges.length; e++){
     allEdges[e].render('black');
   }
+
+// Remove the below line of code once I get a PolygonAgent to define a polygon fully
+  (new PolygonAgent(allEdges[0])).activate();
   
-  for(var i = 0; i < allEdges.length; i++){
-    if(allEdges[i].polygons < allEdges[i].maxPolygons){
-      (new PolygonAgent(allEdges[i])).activate();
-    }
-  }
+// Once I get PolygonAgent to define a polygon fully:
+// 1- Add a 'for' loop that iterates through all Edges and creates a new PolygonAgent
+//    for the given edge if that edge has fewer than its maximum Polygons
+// 2- Once a Polygon has been created, add that Polygon to the .edges array
+//    of each of its Edges.
   
 }
