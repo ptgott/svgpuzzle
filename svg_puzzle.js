@@ -91,7 +91,7 @@ function Direction(xVal, yVal){
         x: 1,
         y: 0
       }      
-    } 
+    }
     
     return turns[turnToTest];
 
@@ -182,6 +182,7 @@ function Edge(point1, point2){
     line.stroke({ width: '1px', color: colour });
     line.node.addEventListener('click', function(){
       console.log(_this);
+      console.log("this.slope", _this.slope());
       console.log("index in all edges", allEdges.indexOf(_this));
     });
   }
@@ -189,6 +190,13 @@ function Edge(point1, point2){
   this.remove = function(){
     allEdges.splice(allEdges.indexOf(this), 1);
     return;
+  }
+  
+  this.slope = function(){
+    return (
+      (this.point2.y - this.point1.y)/
+      (this.point2.x - this.point1.x)
+    );
   }
 }
 
@@ -356,6 +364,27 @@ function PolygonAgent(startEdge){
     // turn.
     // This appears to be the case even if I remove the '0' values from the right turns
     // object literal.
+    
+    // ONE REASON: sorting distalPoints by y value ignores any sorting done by the x value.
+    // It's not 'y within x': it's simply 'y'. What if I were to use 'y' only to 
+    // break ties created by sorting by 'x'?
+    
+    // ANOTHER CASE: the 'x' values of two or more distalPoints are the same,
+    // and the 'y' within currentDirection is '0'. 
+    
+    // Is there another tie-breaker?
+    
+    // ANOTHER WAY:
+    // Calculate slope where I would otherwise calculate angle. Each currentDirection has
+    // a corresponding idealSlope. 
+    
+    // THE VERDICT: I need some combination of slope and position. So far, I've programmed
+    // the PolygonAgent to choose by position with no regard for slope. I need both.
+    // MAKE THE BASIC PROGRESSION OF THE ALGORITHM CLEARER! Maybe go back to 
+    // Microsoft Word.
+    // (I've already added a 'slope' method to Edge)
+    
+    
     // RE: USING ALTERNATIVE ALGORITHMS/METHODS
     // * Using trigonometry would be super-difficult, as I'd need to produce an imaginary axis
     //   out of the currentEdge/currentDirection to calculate the angle of any given
@@ -367,18 +396,21 @@ function PolygonAgent(startEdge){
     //   that's totally inappropriate, i.e.: for a direction with the index 'i'
     //   in the list of directions, direction i-1 isn't necessarily appropriate.
 
+    console.log("trailingEdge slopes", 
+      trailingEdges.map(function(element){
+        return element.slope();
+      })
+    );
+    
     var rightMostPoint = function(){
       console.log("distalPoints before sort", distalPoints);
       var distalPointsByX = distalPoints.sort(function(a,b){
         return (b.x * rightTurnDirection.x) - (a.x * rightTurnDirection.x);
       });
       
-      console.log("distalPointsByX in rightMostPoint()", distalPointsByX);
-      
       var distalsByXbyY = distalPointsByX.sort(function(a,b){
         return (b.y * rightTurnDirection.y) - (a.y * rightTurnDirection.y);
       });
-      console.log("distalsByXbyY in rightMostPoint()", distalsByXbyY);
     
       return distalsByXbyY[0];
     }
@@ -401,10 +433,6 @@ function PolygonAgent(startEdge){
   
   this.activate = function(){
     var nextEdge = this.nextEdge();
-    console.log("=====AND THE CALCULATED NEXT EDGE IS:========");
-    console.log("allEdges.indexOf(this.nextEdge)", allEdges.indexOf(nextEdge));
-    console.log(nextEdge);
-    console.log("----------------------------------");
         
 //  Remove first operand of '||' operator below once I get PolygonAgent to define a Polygon
 //  fully.        
@@ -441,11 +469,11 @@ function PolygonAgent(startEdge){
 
 
 window.onload = function(){
-  window.puzzleGrid = new Grid(3, 3, 40);  
+  window.puzzleGrid = new Grid(5, 5, 40);  
   window.puzzleSpace = SVG('puzzleSpace').size('100%', '100%');
   window.puzzleGrid.render();
   createEdgesFromGridPerimeter();
-  createEdgesFromGridSlices(1, 1);
+  createEdgesFromGridSlices(2, 2);
 
   for(var e = 0; e < allEdges.length; e++){
     allEdges[e].render('black');
