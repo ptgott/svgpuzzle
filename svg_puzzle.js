@@ -77,19 +77,19 @@ function Direction(xVal, yVal){
       },
       "1,1": {
         x: -1,
-        y: -1
+        y: 0
       },
       "1,-1": {
-        x: -1,
+        x: 0,
         y: 1
       },
       "-1,1": {
-        x: 1,
+        x: 0,
         y: -1
       },
       "-1,-1": {
         x: 1,
-        y: 1
+        y: 0
       }      
     } 
     
@@ -349,21 +349,25 @@ function PolygonAgent(startEdge){
     });
         
     // sort the distal points by how sharp of a right turn they present
+    // ** ISSUE ** for some reason, this function is not sorting distal points as intended.
+    // One issue may be the presence of the '&&' operator. 
+    // I can sort numbers in ascending order with the function 'a - b', without doing this/
+    // explicitly returning 1/-1 nonsense.
+    // To do this, I could sort by x then sort by y, i.e. two different sorts, then choose the first.
     var rightMostPoint = function(){
-      console.log("distalPoints in rightMostPoint()", distalPoints);
-      var sortedDistalPoints = distalPoints.sort(function(a,b){
-        if(
-          ((a.x * rightTurnDirection.dirX) >= (b.x * rightTurnDirection.dirX)) &&
-          ((a.y * rightTurnDirection.dirY) >= (b.y * rightTurnDirection.dirY))
-        ){
-          return -1;
-        }
-        else{
-          return 1;
-        }      
+      console.log("distalPoints before sort", distalPoints);
+      var distalPointsByX = distalPoints.sort(function(a,b){
+        return (b.x * rightTurnDirection.x) - (a.x * rightTurnDirection.x);
       });
-      console.log("sortedDistalPoints", sortedDistalPoints);
-      return sortedDistalPoints[0];
+      
+      console.log("distalPointsByX in rightMostPoint()", distalPointsByX);
+      
+      var distalsByXbyY = distalPointsByX.sort(function(a,b){
+        return (b.y * rightTurnDirection.y) - (a.y * rightTurnDirection.y);
+      });
+      console.log("distalsByXbyY in rightMostPoint()", distalsByXbyY);
+    
+      return distalsByXbyY[0];
     }
     
     var rightMostPoint = rightMostPoint();
@@ -374,7 +378,7 @@ function PolygonAgent(startEdge){
     // on the basis of the rightmost distal point.
     var chosenEdge = (trailingEdges.filter(function(edge){
       return (
-        ((edge.point1.x == rightMostPoint.x) && (edge.point2.y == rightMostPoint.y)) ||
+        ((edge.point1.x == rightMostPoint.x) && (edge.point1.y == rightMostPoint.y)) ||
         ((edge.point2.x == rightMostPoint.x) && (edge.point2.y == rightMostPoint.y))
       );
     }))[0];
@@ -422,11 +426,11 @@ function PolygonAgent(startEdge){
 
 
 window.onload = function(){
-  window.puzzleGrid = new Grid(10, 10, 40);  
+  window.puzzleGrid = new Grid(3, 3, 40);  
   window.puzzleSpace = SVG('puzzleSpace').size('100%', '100%');
   window.puzzleGrid.render();
   createEdgesFromGridPerimeter();
-  createEdgesFromGridSlices(3, 3);
+  createEdgesFromGridSlices(1, 1);
 
   for(var e = 0; e < allEdges.length; e++){
     allEdges[e].render('black');
