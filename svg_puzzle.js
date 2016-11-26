@@ -349,17 +349,24 @@ function PolygonAgent(startEdge){
     });
         
     // sort the distal points by how sharp of a right turn they present
-    var rightMostPoint = (distalPoints.sort(function(a,b){
-      if(
-        ((a.x * rightTurnDirection.dirX) >= (b.x * rightTurnDirection.dirX)) &&
-        ((a.y * rightTurnDirection.dirY) >= (b.y * rightTurnDirection.dirY))
-      ){
-        return -1;
-      }
-      else{
-        return 1;
-      }
-    }))[0];
+    var rightMostPoint = function(){
+      console.log("distalPoints in rightMostPoint()", distalPoints);
+      var sortedDistalPoints = distalPoints.sort(function(a,b){
+        if(
+          ((a.x * rightTurnDirection.dirX) >= (b.x * rightTurnDirection.dirX)) &&
+          ((a.y * rightTurnDirection.dirY) >= (b.y * rightTurnDirection.dirY))
+        ){
+          return -1;
+        }
+        else{
+          return 1;
+        }      
+      });
+      console.log("sortedDistalPoints", sortedDistalPoints);
+      return sortedDistalPoints[0];
+    }
+    
+    var rightMostPoint = rightMostPoint();
     
     console.log("rightMostPoint", rightMostPoint);
     
@@ -415,7 +422,7 @@ function PolygonAgent(startEdge){
 
 
 window.onload = function(){
-  window.puzzleGrid = new Grid(50, 50, 15);  
+  window.puzzleGrid = new Grid(10, 10, 40);  
   window.puzzleSpace = SVG('puzzleSpace').size('100%', '100%');
   window.puzzleGrid.render();
   createEdgesFromGridPerimeter();
