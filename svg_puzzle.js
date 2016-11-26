@@ -356,6 +356,16 @@ function PolygonAgent(startEdge){
     // turn.
     // This appears to be the case even if I remove the '0' values from the right turns
     // object literal.
+    // RE: USING ALTERNATIVE ALGORITHMS/METHODS
+    // * Using trigonometry would be super-difficult, as I'd need to produce an imaginary axis
+    //   out of the currentEdge/currentDirection to calculate the angle of any given
+    //   trailingEdge.
+    // * Another idea was to use a recursive function to try out one direction on my list of
+    //   possible directions, see if that matches the ideal rightMost point,
+    //   then iterate through the possible directions if not. However, since each
+    //   edge has a different possible direction, the iteration can easily choose an Edge
+    //   that's totally inappropriate, i.e.: for a direction with the index 'i'
+    //   in the list of directions, direction i-1 isn't necessarily appropriate.
 
     var rightMostPoint = function(){
       console.log("distalPoints before sort", distalPoints);
