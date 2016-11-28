@@ -158,7 +158,7 @@ function Edge(point1, point2){
       );
     });
   }
-  
+    
   this.equals = function(otherEdge){
     var thesePoints = [this.point1, this.point2];
     var otherPoints = [otherEdge.point1, otherEdge.point2];
@@ -182,7 +182,6 @@ function Edge(point1, point2){
     line.stroke({ width: '1px', color: colour });
     line.node.addEventListener('click', function(){
       console.log(_this);
-      console.log("this.slope", _this.slope());
       console.log("index in all edges", allEdges.indexOf(_this));
     });
   }
@@ -192,12 +191,42 @@ function Edge(point1, point2){
     return;
   }
   
-  this.slope = function(){
+  this.slope = (function(){
     return (
-      (this.point2.y - this.point1.y)/
-      (this.point2.x - this.point1.x)
+      (_this.point2.y - _this.point1.y)/
+      (_this.point2.x - _this.point1.x)
     );
-  }
+  })();
+  
+  this.extendedPoints = (function(){
+    // y = mx + b
+    // b = y - mx
+    
+    // what to do re: vertical lines?
+    var pnts = [];
+    
+    if(_this.slope == Infinity){
+      for(var i = 0; i <= window.puzzleGrid.squaresCount['y']; i ++){
+        pnts[i] = new Point(_this.point1.x, i);
+      }
+      return pnts;
+    }
+    var yIntercept = _this.point1.y - (_this.slope * _this.point1.x);
+
+    for(var i = 0; i < window.puzzleGrid.squaresCount['x'] + 1; i ++){
+      pnts[i] = new Point(i, (_this.slope * i) + yIntercept);  
+    }
+    
+    var pntsOnGrid = pnts.filter(function(element){
+      return (
+        (element.x >=0 && element.x <= window.puzzleGrid.squaresCount['x']) &&
+        (element.y >=0 && element.y <= window.puzzleGrid.squaresCount['y'])
+      );
+    });
+    
+    return pntsOnGrid;
+    
+  })();
 }
 
 function Grid(squaresX, squaresY, squareSizePx){
@@ -343,13 +372,8 @@ function PolygonAgent(startEdge){
     
     var trailingEdges = this.trailingEdges();
     
-    console.log("this.forwardPoint (of currentEdge) in this.nextEdge", this.forwardPoint);
-    console.log("trailingEdges in this.nextEdge", trailingEdges);  
-    console.log("currentDirection in this.nextEdge", this.currentDirection);  
     var rightTurnDirection = this.currentDirection.rightMostTurn();
-    
-    console.log("rightTurnDirection in this.nextEdge", rightTurnDirection);
-    
+        
     // Map trailingEdges into an array of points other than the forwardPoint where the
     // trailingEdges meet.
     var distalPoints = trailingEdges.map(function(edg){
@@ -396,14 +420,8 @@ function PolygonAgent(startEdge){
     //   that's totally inappropriate, i.e.: for a direction with the index 'i'
     //   in the list of directions, direction i-1 isn't necessarily appropriate.
 
-    console.log("trailingEdge slopes", 
-      trailingEdges.map(function(element){
-        return element.slope();
-      })
-    );
     
     var rightMostPoint = function(){
-      console.log("distalPoints before sort", distalPoints);
       var distalPointsByX = distalPoints.sort(function(a,b){
         return (b.x * rightTurnDirection.x) - (a.x * rightTurnDirection.x);
       });
@@ -416,9 +434,7 @@ function PolygonAgent(startEdge){
     }
     
     var rightMostPoint = rightMostPoint();
-    
-    console.log("rightMostPoint", rightMostPoint);
-    
+        
     // Since distalPoints loses the Edge that the points belong to, choose an Edge
     // on the basis of the rightmost distal point.
     var chosenEdge = (trailingEdges.filter(function(edge){
@@ -447,9 +463,6 @@ function PolygonAgent(startEdge){
       this.currentEdge = nextEdge;
             
       this.forwardPoint = distalPointFor(nextEdge);
-      console.log("=====SETTING UP THE NEXT EDGE FROM THE CURRENT EDGE=====");
-      console.log("oldForwardPoint at end of this.activate", oldForwardPoint);
-      console.log("ForwardPoint at end of this.activate", this.forwardPoint);
       this.currentDirection = new Direction(
       
         this.forwardPoint.x - oldForwardPoint.x,
