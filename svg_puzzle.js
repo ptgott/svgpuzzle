@@ -47,7 +47,7 @@ function Direction(xVal, yVal){
   this.xVal = xVal;
   this.yVal = yVal;
   
-  this.rightMostTurn = function(){
+  this.rightSideOfLine = function(){
   // Let's face it: The functionality of this function comes from the fact that I gave up
   // on defining a relationship between the direction of travel on the x and y axis
   // and a sharp right turn on a web browser's upside-down coordinate system. Now that I've
@@ -60,36 +60,36 @@ function Direction(xVal, yVal){
     var turnToTest = [this.xVal, this.yVal].toString();
     var turns = {
       "1,0": {
-        x: -1,
+        x: undefined,
         y: 1
       },
       "-1,0": {
-        x: 1,
+        x: undefined,
         y: -1
       },
       "0,1": {
         x: -1,
-        y: -1
+        y: undefined
       },
       "0,-1": {
         x: 1,
-        y: 1
+        y: undefined
       },
       "1,1": {
         x: -1,
-        y: 0
+        y: 1
       },
       "1,-1": {
-        x: 0,
+        x: 1,
         y: 1
       },
       "-1,1": {
-        x: 0,
+        x: -1,
         y: -1
       },
       "-1,-1": {
         x: 1,
-        y: 0
+        y: -1
       }      
     }
     
@@ -202,7 +202,6 @@ function Edge(point1, point2){
     // y = mx + b
     // b = y - mx
     
-    // what to do re: vertical lines?
     var pnts = [];
     
     if(_this.slope == Infinity){
@@ -227,6 +226,12 @@ function Edge(point1, point2){
     return pntsOnGrid;
     
   })();
+  
+  this.extendedPointsByAxis = function(axis, value){
+    return this.extendedPoints.filter(function(exPoint){
+      return exPoint[axis] == value;
+    });
+  }
 }
 
 function Grid(squaresX, squaresY, squareSizePx){
@@ -369,56 +374,86 @@ function PolygonAgent(startEdge){
   }
   
   this.nextEdge = function(){
+  // why not turn nextEdge into an object that inherits from Edge?
     
     var trailingEdges = this.trailingEdges();
     
-    var rightTurnDirection = this.currentDirection.rightMostTurn();
+    var rightTurnDirection = this.currentDirection.rightSideOfLine();
+    
+    var testLine = this.currentEdge.extendedPoints;
         
     // Map trailingEdges into an array of points other than the forwardPoint where the
     // trailingEdges meet.
     var distalPoints = trailingEdges.map(function(edg){
       return distalPointFor(edg);
     });
+    
+    console.log("forwardPoint", this.forwardPoint);
+    
+    console.log("distalPoints", distalPoints);
+    
+    console.log("rightTurnDirection", rightTurnDirection);
+    console.log("testLine", _this.currentEdge.extendedPoints);
         
+    var distalPointsOnRightSide = distalPoints.filter(function(distalPoint){
+    
+    // First, choose two points from the line that extends through currentEdge.
+    // One point corresponds with distalPoint's x value, one with distalPoint's y value.
+
+      var pointsCorrespondingOnTestLine = {
+        x: (_this.currentEdge.extendedPointsByAxis('x', distalPoint['x']))[0],
+        y:  (_this.currentEdge.extendedPointsByAxis('y', distalPoint['y']))[0]
+      }
+      
+      console.log("pointsCorrespondingOnTestLine", pointsCorrespondingOnTestLine);
+    
+    // Second, see which axes we're comparing to distalPoint. Horizontal or vertical lines
+    // only require comparison along one axis.
+      var criteriaAxes = ['x','y'].filter(function(axis){
+        return rightTurnDirection[axis];
+      });
+      
+    // Third, see if distalPoint lies above/below the testLine at its x and y values,
+    // depending on which axes are available to test. Sort the points that sit on the 'right'
+    // side of the testLine into one array (this includes points on the testLine).
+      var testAxes = criteriaAxes.filter(function(axis){
+        var otherAxis = axis == 'x' ? 'y' : 'x';
+        return (
+          (distalPoint[axis] * rightTurnDirection[axis]) >=
+          (pointsCorrespondingOnTestLine[otherAxis][axis] * rightTurnDirection[axis])
+        );
+
+      });
+      return testAxes.length == criteriaAxes.length;
+    });
+    
+    // Fourth, sort the points on the 'left' of the line into another array.
+    
+    var otherDistalPoints = distalPoints.filter(function(distalPoint){
+      return distalPointsOnRightSide.indexOf(distalPoint) == -1;
+    });
+    
+    // ** ISSUE: **
+    //    If the forward point is at, say, (0,2), and the line is making its way back
+    //    to (0,0), one value for one point on pointsCorrespondingOnTestLine
+    //    will be 'undefined'. This is because there is no point on the testLine
+    //    that has a y value of the points along the far edge of the Grid. The line
+    //    ends at the edge of the Grid, and becomes impossible to compare with points on the line.
+    
+    // AFTER FIXING THIS ISSUE: I've divided distal points into those on the right
+    // and those not on the right. This seems to be working. WHAT I WANT TO DO
+    // is sort the 'on the right' distal points by acuteness of the angle they form with currentEdge.
+    // Do this by subtracting the slopes of the edges. If there's nothing
+    // in distalPointsOnRightSide, go with the most obtusely angled point in otherDistalPoints.
+    
+    console.log("distalPointsOnRightSide", distalPointsOnRightSide); 
+    
+    console.log("otherDistalPoints", otherDistalPoints);
+    
+    console.log("===========");
+            
+            
     // sort the distal points by how sharp of a right turn they present
-    // ** ISSUE ** with sorting distal points
-    // If no distal point satisfies the move from the forwardPoint in the rightMostDirection
-    // exactly, it's totally possible that a distalPoint will satisfy only one of the 'x'
-    // or 'y' criteria, moving to the head of the distalPoints array, while not actually being a right
-    // turn.
-    // This appears to be the case even if I remove the '0' values from the right turns
-    // object literal.
-    
-    // ONE REASON: sorting distalPoints by y value ignores any sorting done by the x value.
-    // It's not 'y within x': it's simply 'y'. What if I were to use 'y' only to 
-    // break ties created by sorting by 'x'?
-    
-    // ANOTHER CASE: the 'x' values of two or more distalPoints are the same,
-    // and the 'y' within currentDirection is '0'. 
-    
-    // Is there another tie-breaker?
-    
-    // ANOTHER WAY:
-    // Calculate slope where I would otherwise calculate angle. Each currentDirection has
-    // a corresponding idealSlope. 
-    
-    // THE VERDICT: I need some combination of slope and position. So far, I've programmed
-    // the PolygonAgent to choose by position with no regard for slope. I need both.
-    // MAKE THE BASIC PROGRESSION OF THE ALGORITHM CLEARER! Maybe go back to 
-    // Microsoft Word.
-    // (I've already added a 'slope' method to Edge)
-    
-    
-    // RE: USING ALTERNATIVE ALGORITHMS/METHODS
-    // * Using trigonometry would be super-difficult, as I'd need to produce an imaginary axis
-    //   out of the currentEdge/currentDirection to calculate the angle of any given
-    //   trailingEdge.
-    // * Another idea was to use a recursive function to try out one direction on my list of
-    //   possible directions, see if that matches the ideal rightMost point,
-    //   then iterate through the possible directions if not. However, since each
-    //   edge has a different possible direction, the iteration can easily choose an Edge
-    //   that's totally inappropriate, i.e.: for a direction with the index 'i'
-    //   in the list of directions, direction i-1 isn't necessarily appropriate.
 
     
     var rightMostPoint = function(){
