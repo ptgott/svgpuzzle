@@ -198,22 +198,38 @@ function Edge(point1, point2){
     );
   })();
   
-  this.extendedPoints = (function(){
+  this.extendedLine = new ExtendedLine(this);
+    
+  
+}
+
+function ExtendedLine(edge){
+  var _this = this;
+  this.visibleEdge = edge; 
+  
+  this.functionForX = function(x){
+    var ve = this.visibleEdge;
+    var yIntercept = ve.point1.y - (ve.slope * ve.point1.x);
+    return new Point(x, (ve.slope * x) + yIntercept);
+  }
+  
+  this.points = (function(){
+    var ve = _this.visibleEdge;
     // y = mx + b
     // b = y - mx
     
     var pnts = [];
     
-    if(_this.slope == Infinity){
+    if(ve.slope == Infinity){
       for(var i = 0; i <= window.puzzleGrid.squaresCount['y']; i ++){
-        pnts[i] = new Point(_this.point1.x, i);
+        pnts[i] = new Point(ve.point1.x, i);
       }
       return pnts;
     }
-    var yIntercept = _this.point1.y - (_this.slope * _this.point1.x);
+    
 
     for(var i = 0; i < window.puzzleGrid.squaresCount['x'] + 1; i ++){
-      pnts[i] = new Point(i, (_this.slope * i) + yIntercept);  
+      pnts[i] = _this.functionForX(i); 
     }
     
     var pntsOnGrid = pnts.filter(function(element){
@@ -227,8 +243,15 @@ function Edge(point1, point2){
     
   })();
   
-  this.extendedPointsByAxis = function(axis, value){
-    return this.extendedPoints.filter(function(exPoint){
+  this.getComparisonPoints = function(otherPoint){  
+    return new Point (
+      (this.getPointsByAxis('y', otherPoint['y']))[0],
+      (this.getPointsByAxis('x', otherPoint['x']))[0]
+    )
+  }
+  
+  this.getPointsByAxis = function(axis, value){
+    return this.points.filter(function(exPoint){
       return exPoint[axis] == value;
     });
   }
@@ -379,9 +402,7 @@ function PolygonAgent(startEdge){
     var trailingEdges = this.trailingEdges();
     
     var rightTurnDirection = this.currentDirection.rightSideOfLine();
-    
-    var testLine = this.currentEdge.extendedPoints;
-        
+            
     // Map trailingEdges into an array of points other than the forwardPoint where the
     // trailingEdges meet.
     var distalPoints = trailingEdges.map(function(edg){
@@ -393,20 +414,17 @@ function PolygonAgent(startEdge){
     console.log("distalPoints", distalPoints);
     
     console.log("rightTurnDirection", rightTurnDirection);
-    console.log("testLine", _this.currentEdge.extendedPoints);
         
     var distalPointsOnRightSide = distalPoints.filter(function(distalPoint){
     
     // First, choose two points from the line that extends through currentEdge.
     // One point corresponds with distalPoint's x value, one with distalPoint's y value.
 
-      var pointsCorrespondingOnTestLine = {
-        x: (_this.currentEdge.extendedPointsByAxis('x', distalPoint['x']))[0],
-        y:  (_this.currentEdge.extendedPointsByAxis('y', distalPoint['y']))[0]
-      }
-      
-      console.log("pointsCorrespondingOnTestLine", pointsCorrespondingOnTestLine);
+    // Add the below object to the ExtendedEdge object, warranting a much simpler
+    // variable name.
     
+      var comparisonPointsFor = _this.currentEdge.extendedLine.getComparisonPoints(distalPoint);
+              
     // Second, see which axes we're comparing to distalPoint. Horizontal or vertical lines
     // only require comparison along one axis.
       var criteriaAxes = ['x','y'].filter(function(axis){
@@ -417,10 +435,10 @@ function PolygonAgent(startEdge){
     // depending on which axes are available to test. Sort the points that sit on the 'right'
     // side of the testLine into one array (this includes points on the testLine).
       var testAxes = criteriaAxes.filter(function(axis){
-        var otherAxis = axis == 'x' ? 'y' : 'x';
+        var criterionValue = comparisonPointsFor[axis][axis];
         return (
           (distalPoint[axis] * rightTurnDirection[axis]) >=
-          (pointsCorrespondingOnTestLine[otherAxis][axis] * rightTurnDirection[axis])
+          (criterionValue * rightTurnDirection[axis])
         );
 
       });
@@ -439,6 +457,11 @@ function PolygonAgent(startEdge){
     //    will be 'undefined'. This is because there is no point on the testLine
     //    that has a y value of the points along the far edge of the Grid. The line
     //    ends at the edge of the Grid, and becomes impossible to compare with points on the line.
+    // ** WHAT TO DO?**
+    // 1- I could change the getExtendedPoint function to use not an array
+    //    but the slope-intercept equation to pump out a point. 
+    //    Use Edge.lineFunctionForX();
+
     
     // AFTER FIXING THIS ISSUE: I've divided distal points into those on the right
     // and those not on the right. This seems to be working. WHAT I WANT TO DO
