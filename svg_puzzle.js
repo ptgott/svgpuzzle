@@ -207,10 +207,22 @@ function ExtendedLine(edge){
   var _this = this;
   this.visibleEdge = edge; 
   
-  this.functionForX = function(x){
+  this.yIntercept = (
+    this.visibleEdge.point1.y - (this.visibleEdge.slope * this.visibleEdge.point1.x)
+  );
+  
+  this.getYWithX = function(x){
     var ve = this.visibleEdge;
-    var yIntercept = ve.point1.y - (ve.slope * ve.point1.x);
+    var yIntercept = this.yIntercept;
     return new Point(x, (ve.slope * x) + yIntercept);
+  }
+  
+  this.getXWithY = function(y){
+    var ve = this.visibleEdge;
+    //y = mx+b
+    //x = (y - b)/m
+    
+    return (y - this.yIntercept)/this.visibleEdge.slope;
   }
   
   this.points = (function(){
@@ -229,7 +241,7 @@ function ExtendedLine(edge){
     
 
     for(var i = 0; i < window.puzzleGrid.squaresCount['x'] + 1; i ++){
-      pnts[i] = _this.functionForX(i); 
+      pnts[i] = _this.getYWithX(i); 
     }
     
     var pntsOnGrid = pnts.filter(function(element){
@@ -244,15 +256,38 @@ function ExtendedLine(edge){
   })();
   
   this.getComparisonPoints = function(otherPoint){  
-    return new Point (
-      (this.getPointsByAxis('y', otherPoint['y']))[0],
-      (this.getPointsByAxis('x', otherPoint['x']))[0]
-    )
+    // In case you are tempted to replace this code with something that 
+    // iterates through 'x' and 'y', I've tried it, and it makes things confusing without saving
+    // space!
+    var resultForX = function(){
+      if(Math.abs(_this.visibleEdge.slope) > 0){
+        var resultingY = _this.getYWithX(otherPoint.x);
+        return new Point(otherPoint.x, resultingY);
+      }
+      else{
+        return (_this.getPointsByAxis('y', otherPoint.y))[0];
+      }
+    }
+    
+    var resultForY = function(){
+      if(Math.abs(_this.visibleEdge.slope) > 0){
+        var resultingX = _this.getXWithY(otherPoint.y);
+        return new Point(resultingX, otherPoint.y);
+      }
+      else{
+       return (_this.getPointsByAxis('x', otherPoint.x))[0];
+      }
+    }
+    
+   return {
+     x: resultForX(),
+     y: resultForY()
+   }
   }
   
   this.getPointsByAxis = function(axis, value){
-    return this.points.filter(function(exPoint){
-      return exPoint[axis] == value;
+    return this.points.filter(function(pnt){
+      return pnt[axis] == value;
     });
   }
 }
@@ -422,8 +457,10 @@ function PolygonAgent(startEdge){
 
     // Add the below object to the ExtendedEdge object, warranting a much simpler
     // variable name.
-    
+        
       var comparisonPointsFor = _this.currentEdge.extendedLine.getComparisonPoints(distalPoint);
+      
+      console.log("comparisonPointsFor", comparisonPointsFor);
               
     // Second, see which axes we're comparing to distalPoint. Horizontal or vertical lines
     // only require comparison along one axis.
@@ -451,21 +488,8 @@ function PolygonAgent(startEdge){
       return distalPointsOnRightSide.indexOf(distalPoint) == -1;
     });
     
-    // ** ISSUE: **
-    //    If the forward point is at, say, (0,2), and the line is making its way back
-    //    to (0,0), one value for one point on pointsCorrespondingOnTestLine
-    //    will be 'undefined'. This is because there is no point on the testLine
-    //    that has a y value of the points along the far edge of the Grid. The line
-    //    ends at the edge of the Grid, and becomes impossible to compare with points on the line.
-    // ** WHAT TO DO?**
-    // 1- I could change the getExtendedPoint function to use not an array
-    //    but the slope-intercept equation to pump out a point. 
-    //    Use Edge.lineFunctionForX();
-
-    
-    // AFTER FIXING THIS ISSUE: I've divided distal points into those on the right
-    // and those not on the right. This seems to be working. WHAT I WANT TO DO
-    // is sort the 'on the right' distal points by acuteness of the angle they form with currentEdge.
+    // DO NEXT:
+    // Sort the 'on the right' distal points by acuteness of the angle they form with currentEdge.
     // Do this by subtracting the slopes of the edges. If there's nothing
     // in distalPointsOnRightSide, go with the most obtusely angled point in otherDistalPoints.
     
