@@ -1,6 +1,21 @@
 var allEdges = [];
 var allPolygons = [];
 
+function getEdgeFromPoints(pointa, pointb){
+ return (allEdges.filter(function(edge){
+   var thisEdgeXs = [edge.point1.x, edge.point2.x];
+   var thisEdgeYs = [edge.point1.y, edge.point2.y];
+   
+   return(
+     thisEdgeXs.indexOf(pointa.x) != -1 &&
+     thisEdgeXs.indexOf(pointb.x) != -1 &&
+     thisEdgeYs.indexOf(pointa.y) != -1 &&
+     thisEdgeYs.indexOf(pointb.y) != -1     
+   );
+ }))[0];
+  
+}
+
 function createEdgesFromGridPerimeter(){
   for(var i = 0; i < window.puzzleGrid.squaresCount['x']; i++){
     var e1 = new Edge(
@@ -123,6 +138,13 @@ function Edge(point1, point2){
   this.add = function(){
     allEdges.push(this);
   };
+  
+  this.angleFrom = function(otherEdge){
+    var edgeDifference = otherEdge.slope - this.slope;
+    
+    return isNaN(edgeDifference) ? 0 : edgeDifference;
+    
+  }
     
   this.doesItIntersectWithinSquare = function(){
 
@@ -448,15 +470,16 @@ function PolygonAgent(startEdge){
     
     console.log("distalPoints", distalPoints);
     
+    console.log("angleFrom trailingEdges", trailingEdges.map(function(element){
+      return _this.currentEdge.angleFrom(element);
+    }));
+    
     console.log("rightTurnDirection", rightTurnDirection);
         
     var distalPointsOnRightSide = distalPoints.filter(function(distalPoint){
     
     // First, choose two points from the line that extends through currentEdge.
     // One point corresponds with distalPoint's x value, one with distalPoint's y value.
-
-    // Add the below object to the ExtendedEdge object, warranting a much simpler
-    // variable name.
         
       var comparisonPointsFor = _this.currentEdge.extendedLine.getComparisonPoints(distalPoint);
       
@@ -488,43 +511,33 @@ function PolygonAgent(startEdge){
       return distalPointsOnRightSide.indexOf(distalPoint) == -1;
     });
     
-    // DO NEXT:
-    // Sort the 'on the right' distal points by acuteness of the angle they form with currentEdge.
-    // Do this by subtracting the slopes of the edges. If there's nothing
-    // in distalPointsOnRightSide, go with the most obtusely angled point in otherDistalPoints.
+    var edgesOnTheRight = distalPointsOnRightSide.map(function(pnt){
+      return getEdgeFromPoints(pnt, _this.forwardPoint);
+    });
     
+    var edgesOnTheLeft = otherDistalPoints.map(function(pnt){
+      return getEdgeFromPoints(pnt, _this.forwardPoint);
+    });
+    
+    var rightEdgesByAcuteAngle = edgesOnTheRight.sort(function(a,b){
+      return _this.currentEdge.angleFrom(a) - _this.currentEdge.angleFrom(b);
+    });
+    
+    var leftEdgesByObtuseAngle = edgesOnTheLeft.sort(function(a,b){
+      return _this.currentEdge.angleFrom(b) - _this.currentEdge.angleFrom(a);
+    });
+    
+        
     console.log("distalPointsOnRightSide", distalPointsOnRightSide); 
     
     console.log("otherDistalPoints", otherDistalPoints);
     
     console.log("===========");
+    
+    var chosenEdge = (
+      rightEdgesByAcuteAngle.length > 0 ? rightEdgesByAcuteAngle[0] : leftEdgesByObtuseAngle[0]
+    );
             
-            
-    // sort the distal points by how sharp of a right turn they present
-
-    
-    var rightMostPoint = function(){
-      var distalPointsByX = distalPoints.sort(function(a,b){
-        return (b.x * rightTurnDirection.x) - (a.x * rightTurnDirection.x);
-      });
-      
-      var distalsByXbyY = distalPointsByX.sort(function(a,b){
-        return (b.y * rightTurnDirection.y) - (a.y * rightTurnDirection.y);
-      });
-    
-      return distalsByXbyY[0];
-    }
-    
-    var rightMostPoint = rightMostPoint();
-        
-    // Since distalPoints loses the Edge that the points belong to, choose an Edge
-    // on the basis of the rightmost distal point.
-    var chosenEdge = (trailingEdges.filter(function(edge){
-      return (
-        ((edge.point1.x == rightMostPoint.x) && (edge.point1.y == rightMostPoint.y)) ||
-        ((edge.point2.x == rightMostPoint.x) && (edge.point2.y == rightMostPoint.y))
-      );
-    }))[0];
     
     return chosenEdge;
   }
