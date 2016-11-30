@@ -18,6 +18,19 @@
 // between distal points, given a shared vertex, with that difference mapped against
 // a set of conversions to degrees.
 
+// One strategy for finding an 'angle': Take the distance between the two unconnected
+// points of the two edges in question. 'Distance' here is the total number of 'steps'
+// between the points, i.e., how many grid edges you'd need to traverse to get from
+// one point to the other, regardless of direction: taxicab geometry. To get this,
+// I total the absolute value of the diff in xs with the absolute value of the diff in ys.
+
+// The problem with this approach: it relies on the lenght of edges. An edge that creates
+// a 45-degree angle with the horizontal produces a bigger distance than a second horizontal,
+// even though the latter is 180 degrees. CHALLENGE: Find another way to define angles
+// that requires neither slope nor taxicab-geometric distance.
+// I've added the 'pointApartFrom' function to Edge to supply points on which two
+// (supposedly adjoining) edges do not meet.
+
 var allEdges = [];
 var allPolygons = [];
 
@@ -210,6 +223,17 @@ function Edge(point1, point2){
     return ([this.point1, this.point2].filter(function(edgePoint){
       return (edgePoint.x != criterionPoint.x) || (edgePoint.y != criterionPoint.y);
     }))[0];
+  }
+  
+  this.pointsApartFrom = function(otherEdge){
+  // This function assumes that the other edge adjoins the first. Hardcode this assumption
+  // in eventually!
+    return [otherEdge.point1, otherEdge.point2].filter(function(pnt){
+      return(
+        (pnt.x != _this.point1.x || pnt.y != _this.point1.y) &&
+        (pnt.x != _this.point2.x || pnt.y != _this.point2.y)
+      );
+    });
   }
   
     
