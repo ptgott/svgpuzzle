@@ -127,7 +127,15 @@ function Edge(point1, point2){
   this.angleFrom = function(otherEdge){
     var edgeDifference = otherEdge.slope - this.slope;
     
-    return isNaN(edgeDifference) ? 0 : edgeDifference;
+    var convertToAngle = {
+      "0": 180,
+      "1": 135,
+      "Infinity": 90,
+      "-1": 45
+    }
+    
+    var valueToConvert = isNaN(edgeDifference) ? 0 : edgeDifference;
+    return convertToAngle["" + valueToConvert];
     
   }
     
@@ -488,13 +496,7 @@ function PolygonAgent(startEdge){
     var edgesOnTheLeft = trailingEdges.filter(function(edg){
       return edgesOnTheRight.indexOf(edg) == -1;
     });
-    
-    // ** ISSUE ** for a given edge with slope 0 and direction (1,0), the Edges
-    // trailing the forward point of the given edge with distalPoints (0,1), (1,1) and (2,1)
-    // will have, respectively, these angles with the given edge: -1, Infinity, 1.
-    // It is impossible to rank these angles by size using a simple 'sort', as Infinity 
-    // is in the middle. WHAT TO DO? 
-    
+       
     
     console.log("trailingEdges", trailingEdges);
         
