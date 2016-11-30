@@ -439,16 +439,19 @@ function PolygonAgent(startEdge){
   }
     
   this.nextEdge = function(){
+  
+    console.log("forwardPoint", this.forwardPoint); 
+  
   // why not turn nextEdge into an object that inherits from Edge?
+  
     
     var trailingEdges = this.trailingEdges();
-    
+        
     var rightTurnDirection = this.currentDirection.rightSideOfLine();
             
     // Map trailingEdges into an array of points other than the forwardPoint where the
     // trailingEdges meet.
     
-    console.log("forwardPoint", this.forwardPoint); 
     
     console.log("rightTurnDirection", rightTurnDirection);
         
@@ -459,9 +462,7 @@ function PolygonAgent(startEdge){
       var distalPoint = edg.otherPointThan(_this.forwardPoint);
     
       var comparisonPointsFor = _this.currentEdge.extendedLine.getComparisonPoints(distalPoint);
-  
-      console.log("comparisonPointsFor", comparisonPointsFor);
-          
+            
     // Second, see which axes we're comparing to distalPoint. Horizontal or vertical lines
     // only require comparison along one axis. I.e. only one axis might have a rightTurn.
       var criteriaAxes = ['x','y'].filter(function(axis){
@@ -481,21 +482,45 @@ function PolygonAgent(startEdge){
       });
       return testAxes.length == criteriaAxes.length;
     });
-
-    
+        
     // Fourth, sort the points on the 'left' of the line into another array.
     
     var edgesOnTheLeft = trailingEdges.filter(function(edg){
       return edgesOnTheRight.indexOf(edg) == -1;
     });
     
+    // ** ISSUE ** for a given edge with slope 0 and direction (1,0), the Edges
+    // trailing the forward point of the given edge with distalPoints (0,1), (1,1) and (2,1)
+    // will have, respectively, these angles with the given edge: -1, Infinity, 1.
+    // It is impossible to rank these angles by size using a simple 'sort', as Infinity 
+    // is in the middle. WHAT TO DO? 
+    
+    
+    console.log("trailingEdges", trailingEdges);
+        
+    console.log("anglesOfTrailingEdges", trailingEdges.map(function(edg){
+      return { 
+        distalPoint: edg.otherPointThan(_this.forwardPoint),
+        angle: _this.currentEdge.angleFrom(edg)
+      };
+    }));
+    
     var rightEdgesByAcuteAngle = edgesOnTheRight.sort(function(a,b){
       return _this.currentEdge.angleFrom(a) - _this.currentEdge.angleFrom(b);
     });
     
+    console.log("rightEdgesByAcuteAngle", rightEdgesByAcuteAngle.map(function(edg){
+      return { 
+        distalPoint: edg.otherPointThan(_this.forwardPoint),
+        angle: _this.currentEdge.angleFrom(edg)
+      };
+    }));;
+    
     var leftEdgesByObtuseAngle = edgesOnTheLeft.sort(function(a,b){
       return _this.currentEdge.angleFrom(b) - _this.currentEdge.angleFrom(a);
     });
+    
+    console.log("leftEdgesByObtuseAngle", leftEdgesByObtuseAngle);
     
     console.log("===========");
     
