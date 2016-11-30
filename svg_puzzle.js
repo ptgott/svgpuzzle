@@ -1,3 +1,23 @@
+// **ISSUE** Given a currentEdge with a slope of 1 and a trailingEdge with a slope of Infinity,
+// the difference between slopes becomes -Infinity. This produces an angle of '90', which
+// is incorrect. The angle is obviously 45 on screen. What if I converted slope to angle 
+// before subtracting the angles? The angle would be taken from the horizontal.
+// Then, ideally, the current edge would an angle of 45deg, and the trailing edge would
+// have an angle of 90.
+// Right, so I've tried this, and here's the issue: there's no way to distinguish
+// a 90deg angle from a -90deg angle. This is because considering a difference in slope
+// removes any consideration of direction. If currentEdge is a vertical Edge and the Agent
+// is deciding between two horizontal Edges, both will always have the same slope. Thus
+// the difference between their slope and the slope of the vertical line will always be the same.
+// The key intervention in my solution is to select angles from other measurements, rather
+// than using slopes or trigonometry. 
+
+// Since I'm not working with the usual geometry (e.g. vertical lines are allowed; I'm 
+// treating 45deg lines as the same length as vertical /horizontal lines, etc),
+// I will need some kind of artificial rule. Here's one: angle = the difference
+// between distal points, given a shared vertex, with that difference mapped against
+// a set of conversions to degrees.
+
 var allEdges = [];
 var allPolygons = [];
 
