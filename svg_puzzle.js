@@ -1,21 +1,6 @@
 var allEdges = [];
 var allPolygons = [];
 
-function getEdgeFromPoints(pointa, pointb){
- return (allEdges.filter(function(edge){
-   var thisEdgeXs = [edge.point1.x, edge.point2.x];
-   var thisEdgeYs = [edge.point1.y, edge.point2.y];
-   
-   return(
-     thisEdgeXs.indexOf(pointa.x) != -1 &&
-     thisEdgeXs.indexOf(pointb.x) != -1 &&
-     thisEdgeYs.indexOf(pointa.y) != -1 &&
-     thisEdgeYs.indexOf(pointb.y) != -1     
-   );
- }))[0];
-  
-}
-
 function createEdgesFromGridPerimeter(){
   for(var i = 0; i < window.puzzleGrid.squaresCount['x']; i++){
     var e1 = new Edge(
@@ -191,6 +176,12 @@ function Edge(point1, point2){
       });
     })).length == 2;
     
+  }
+  
+  this.otherPointThan = function(criterionPoint){
+    return ([this.point1, this.point2].filter(function(edgePoint){
+      return (edgePoint.x != criterionPoint.x) || (edgePoint.y != criterionPoint.y);
+    }))[0];
   }
   
     
@@ -446,13 +437,7 @@ function PolygonAgent(startEdge){
   this.trailingEdges = function(){
     return this.currentEdge.edgesThatMeetAtPoint(this.forwardPoint);
   }
-  
-  function distalPointFor(adjoiningEdge){
-    return ([adjoiningEdge.point1, adjoiningEdge.point2].filter(function(pt){
-      return (pt.x != _this.forwardPoint.x) || (pt.y != _this.forwardPoint.y);
-    }))[0];
-  }
-  
+    
   this.nextEdge = function(){
   // why not turn nextEdge into an object that inherits from Edge?
     
@@ -462,35 +447,27 @@ function PolygonAgent(startEdge){
             
     // Map trailingEdges into an array of points other than the forwardPoint where the
     // trailingEdges meet.
-    var distalPoints = trailingEdges.map(function(edg){
-      return distalPointFor(edg);
-    });
     
-    console.log("forwardPoint", this.forwardPoint);
-    
-    console.log("distalPoints", distalPoints);
-    
-    console.log("angleFrom trailingEdges", trailingEdges.map(function(element){
-      return _this.currentEdge.angleFrom(element);
-    }));
+    console.log("forwardPoint", this.forwardPoint); 
     
     console.log("rightTurnDirection", rightTurnDirection);
         
-    var distalPointsOnRightSide = distalPoints.filter(function(distalPoint){
-    
+    var edgesOnTheRight = trailingEdges.filter(function(edg){
+  
     // First, choose two points from the line that extends through currentEdge.
     // One point corresponds with distalPoint's x value, one with distalPoint's y value.
-        
+      var distalPoint = edg.otherPointThan(_this.forwardPoint);
+    
       var comparisonPointsFor = _this.currentEdge.extendedLine.getComparisonPoints(distalPoint);
-      
+  
       console.log("comparisonPointsFor", comparisonPointsFor);
-              
+          
     // Second, see which axes we're comparing to distalPoint. Horizontal or vertical lines
-    // only require comparison along one axis.
+    // only require comparison along one axis. I.e. only one axis might have a rightTurn.
       var criteriaAxes = ['x','y'].filter(function(axis){
         return rightTurnDirection[axis];
       });
-      
+  
     // Third, see if distalPoint lies above/below the testLine at its x and y values,
     // depending on which axes are available to test. Sort the points that sit on the 'right'
     // side of the testLine into one array (this includes points on the testLine).
@@ -504,19 +481,12 @@ function PolygonAgent(startEdge){
       });
       return testAxes.length == criteriaAxes.length;
     });
+
     
     // Fourth, sort the points on the 'left' of the line into another array.
     
-    var otherDistalPoints = distalPoints.filter(function(distalPoint){
-      return distalPointsOnRightSide.indexOf(distalPoint) == -1;
-    });
-    
-    var edgesOnTheRight = distalPointsOnRightSide.map(function(pnt){
-      return getEdgeFromPoints(pnt, _this.forwardPoint);
-    });
-    
-    var edgesOnTheLeft = otherDistalPoints.map(function(pnt){
-      return getEdgeFromPoints(pnt, _this.forwardPoint);
+    var edgesOnTheLeft = trailingEdges.filter(function(edg){
+      return edgesOnTheRight.indexOf(edg) == -1;
     });
     
     var rightEdgesByAcuteAngle = edgesOnTheRight.sort(function(a,b){
@@ -526,11 +496,6 @@ function PolygonAgent(startEdge){
     var leftEdgesByObtuseAngle = edgesOnTheLeft.sort(function(a,b){
       return _this.currentEdge.angleFrom(b) - _this.currentEdge.angleFrom(a);
     });
-    
-        
-    console.log("distalPointsOnRightSide", distalPointsOnRightSide); 
-    
-    console.log("otherDistalPoints", otherDistalPoints);
     
     console.log("===========");
     
@@ -557,9 +522,8 @@ function PolygonAgent(startEdge){
       this.edges.push(nextEdge);
       this.currentEdge = nextEdge;
             
-      this.forwardPoint = distalPointFor(nextEdge);
+      this.forwardPoint = nextEdge.otherPointThan(oldForwardPoint);
       this.currentDirection = new Direction(
-      
         this.forwardPoint.x - oldForwardPoint.x,
         this.forwardPoint.y - oldForwardPoint.y
       );
