@@ -125,8 +125,12 @@ function Edge(point1, point2){
   };
   
   this.angleFrom = function(otherEdge){
-  // Currently: I'm converting any difference in angle of '0' to '180', which allows
-  // this angle to show up as the largest angle in an array of angles from the same point.
+  // There should not be an angle that >= 0. This is because every angle is taken 
+  // as being from between 1 - 180 on a given side (left or right). That is, since I
+  // so far only consider angles when segregating edges on the basis of being 'left' or 'right'
+  // of a given edge, I'm only considering angles between 1 - 180 using the reference
+  // edge as an axis. Any negative angles are taken as obtuse. 0 angles are taken as
+  // 180.
   
     var convertToAngle = {
       "0": 180,
@@ -134,14 +138,19 @@ function Edge(point1, point2){
       "Infinity": 90,
       "-1": 45
     }
+  
 
     var otherSlope = convertToAngle['' + otherEdge.slope];
     var thisSlope = convertToAngle['' + this.slope];
   
     var resultAngle = otherSlope - thisSlope;
-    
-    return resultAngle == 0 ? 180 : resultAngle;
-    
+    if(resultAngle <= 0){
+      return 180 + resultAngle;
+    }
+    else{
+      return resultAngle;
+    }
+        
   }
     
   this.doesItIntersectWithinSquare = function(){
