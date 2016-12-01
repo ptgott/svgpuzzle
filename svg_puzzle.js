@@ -1,3 +1,11 @@
+// ***ISSUE***
+// Every now and then, an Edge will not include/be included in all of the Polygons I would
+// expect. If I render as 'red' any Edge that is included in a Polygon, there is occasionally
+// one Edge that remains black. 
+// Until I sort this out, I've commented out various bits of code, including the
+// code that renders the puzzle. Once I sort this out, un-comment this and 
+// add the random x and y offset code to the coordinate string in Polygon.render().
+
 var allEdges = [];
 var allPolygons = [];
 
@@ -449,6 +457,10 @@ function Polygon(edgeArray, pointsObject){
   this.points = pointsObject;
   
   console.log(this);
+  
+  for(var i = 0; i < this.edges.length; i++){
+    this.edges[i].polygons.push(this);
+  }
       
   this.render = function(){
     var pointsString = (function(){
@@ -602,7 +614,7 @@ function PolygonAgent(startEdge){
       _this.forwardPoint.y == _this.startPoint.y){
             
       var newPolygon = new Polygon(this.edges, this.points);
-      newPolygon.render();
+//       newPolygon.render();
     }
     else{
       var oldForwardPoint = this.forwardPoint;
@@ -639,6 +651,9 @@ window.onload = function(){
   }
   
   for(var j = 0; j < allEdges.length; j++){
+    if(allEdges[j].maxPolygons == 1){
+      allEdges[j].render("yellow");
+    }
     if(allEdges[j].polygons < allEdges[j].maxPolygons){
       (new PolygonAgent(allEdges[j])).activate();
     }
