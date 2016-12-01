@@ -421,6 +421,21 @@ function Point(x,y){
   this.y = y;
 }
 
+function Polygon(edgeArray){
+  var _this = this;
+  this.edges = edgeArray;
+  this.points = (function(){
+    // iterate through edgeArray. Add each edge's point to this.points if there is currently
+    // no point with the same x/y value in the array.
+  })();
+  
+  this.render = function(){
+    for(var i = 0; i < this.edges.length; i++){
+      this.edges[i].render("pink");
+    }
+  }
+}
+
 function PolygonAgent(startEdge){
   var _this = this;
   this.edges = [startEdge];
@@ -519,18 +534,12 @@ function PolygonAgent(startEdge){
   
   this.activate = function(){
     var nextEdge = this.nextEdge();
-        
-//  Remove first operand of '||' operator below once I get PolygonAgent to define a Polygon
-//  fully.        
-    if(this.edges.length > 50 || (
-      _this.forwardPoint.x == _this.startPoint.x &&
-      _this.forwardPoint.y == _this.startPoint.y
-    )){
-      console.log("There should be a new Polygon now!!");
-      for(var i = 0; i < this.edges.length; i++){
-        this.edges[i].render("yellow");
-      }
-      // insert code for a new Polygon here
+             
+    if(_this.forwardPoint.x == _this.startPoint.x &&
+      _this.forwardPoint.y == _this.startPoint.y){
+      
+      var newPolygon = new Polygon(this.edges);
+      newPolygon.render();
     }
     else{
       var oldForwardPoint = this.forwardPoint;
@@ -546,8 +555,6 @@ function PolygonAgent(startEdge){
       _this.activate();
     }
   }            
-
-    // end by producing a Polygon object from this.edges.    
     
     // later I'll want to take the points that belong to a Polygon (not Point objects,
     // as different Edges will have produced different Points for the same coordinates)
