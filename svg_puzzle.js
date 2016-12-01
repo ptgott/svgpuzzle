@@ -447,10 +447,21 @@ function Polygon(edgeArray){
   var _this = this;
   this.edges = edgeArray;
   this.points = (function(){
-    // iterate through edgeArray. Add each edge's point to this.points if there is currently
-    // no point with the same x/y value in the array.
+    var pntsArry = [];
+    
+    for(var i = 0; i < _this.edges.length; i++){
+      var matchesPoint1 = pntsArry.some(function(pnt){
+        return _this.edges[i].point1.x == pnt.x && _this.edges[i].point1.y == pnt.y;        
+      });
+      var matchesPoint2 = pntsArry.some(function(pnt){
+        return _this.edges[i].point2.x == pnt.x && _this.edges[i].point2.y == pnt.y;        
+      });
+      matchesPoint1 || pntsArry.push(_this.edges[i].point1);
+      matchesPoint2 || pntsArry.push(_this.edges[i].point2); 
+    }
+    return pntsArry;
   })();
-  
+    
   this.render = function(){
     for(var i = 0; i < this.edges.length; i++){
       this.edges[i].render("pink");
