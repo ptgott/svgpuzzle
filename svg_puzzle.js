@@ -1,3 +1,12 @@
+//**ISSUE** PolygonAgent can produce Polygon just fine when the startEdge
+// is at the top of the Grid. Yet if it's along the very bottom edge,
+// you get a 'too much recursion' error: it can't find its initial point.
+//   A startEdge down the right side of the grid is okay.
+//   A startEdge down the left side of the grid creates the same issue.
+//   A startEdge that's not on the perimeter of the grid is okay.
+// SUMMARY: PolygonAgents beginning on the bottom or left of the perimeter cannot find its
+// origin. All other PolygonAgents can.
+
 var allEdges = [];
 var allPolygons = [];
 
@@ -472,6 +481,8 @@ function PolygonAgent(startEdge){
   }
     
   this.nextEdge = function(){ 
+  
+    console.log("forwardPoint", this.forwardPoint);
     
     var trailingEdges = this.trailingEdges();
         
@@ -519,21 +530,44 @@ function PolygonAgent(startEdge){
       return _this.currentEdge.angleFrom(a) - _this.currentEdge.angleFrom(b);
     });
     
+    console.log("rightEdgesByAcuteAngle", rightEdgesByAcuteAngle.map(function(edg){
+      return {
+        distalPoint: edg.otherPointThan(_this.forwardPoint),
+        angle: _this.currentEdge.angleFrom(edg)        
+      }
+    }));
+    
     
     var leftEdgesByObtuseAngle = edgesOnTheLeft.sort(function(a,b){
       return _this.currentEdge.angleFrom(b) - _this.currentEdge.angleFrom(a);
     });
+    
+    console.log("leftEdgesByObtuseAngle", leftEdgesByObtuseAngle.map(function(edg){
+      return {
+        distalPoint: edg.otherPointThan(_this.forwardPoint),
+        angle: _this.currentEdge.angleFrom(edg)        
+      }
+    }));
     
     var chosenEdge = (
       rightEdgesByAcuteAngle.length > 0 ? rightEdgesByAcuteAngle[0] : leftEdgesByObtuseAngle[0]
     );
             
     
+    console.log("=================");
+
+    
     return chosenEdge;
+    
   }
   
   this.activate = function(){
     var nextEdge = this.nextEdge();
+    
+    // The 'if' statement below is a safeguard against 'too much recursion' errors.
+    // Remove it once I've got all Polygons to form as expected, from all 
+    // eligible startEdges.
+    if(this.edges.length > 25){ return; }
              
     if(_this.forwardPoint.x == _this.startPoint.x &&
       _this.forwardPoint.y == _this.startPoint.y){
@@ -573,9 +607,16 @@ window.onload = function(){
   for(var e = 0; e < allEdges.length; e++){
     allEdges[e].render('black');
   }
+  
+// Bring the below 'for' block back once I get PolygonAgent to activate at all indices
+// of allEdges.
+//   for(var j = 0; j < allEdges.length; j++){
+//     if(allEdges[j].polygons < allEdges[j].maxPolygons){
+//       (new PolygonAgent(allEdges[j])).activate();
+//     }
+//   }
 
-// Remove the below line of code once I get a PolygonAgent to define a polygon fully
-  (new PolygonAgent(allEdges[0])).activate();
+  (new PolygonAgent(allEdges[1])).activate();
   
 // Once I get PolygonAgent to define a polygon fully:
 // 1- Add a 'for' loop that iterates through all Edges and creates a new PolygonAgent
