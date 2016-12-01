@@ -457,7 +457,7 @@ function Polygon(edgeArray, pointsObject){
   this.points = pointsObject;
   
   console.log(this);
-  
+    
   for(var i = 0; i < this.edges.length; i++){
     this.edges[i].polygons.push(this);
   }
@@ -465,16 +465,13 @@ function Polygon(edgeArray, pointsObject){
   this.render = function(){
     var pointsString = (function(){
       // I need a less 'magic' way to specify the initial offsets of each piece.
-//       var initialXOffset = Math.random() * document.body.clientWidth * .5;
-//       var initialYOffset = Math.random() * document.body.clientHeight * .5;
+      var initialXOffset = Math.random() * (document.body.clientWidth/2);
+      var initialYOffset = Math.random() * (document.body.clientHeight/2);
 
-// ISSUE: Polygons are being duplicated. Once there are only as many Polygons as there should be,
-// un-comment the 'initialOffset' variables and add these to renderedX and renderedY.
-// This will place each Polygon at a random place within the browser window.
       var strng = '';
       for(var i = 0, pnts = _this.points, keys = Object.keys(_this.points); i < keys.length; i++){
-        var renderedX = (pnts[keys[i]].x * window.puzzleGrid.squareSize);
-        var renderedY = (pnts[keys[i]].y * window.puzzleGrid.squareSize);
+        var renderedX = (pnts[keys[i]].x * window.puzzleGrid.squareSize) + initialXOffset;
+        var renderedY = (pnts[keys[i]].y * window.puzzleGrid.squareSize) + initialXOffset;
         strng = strng + (renderedX + "," + renderedY + " ");
       }
       return strng;
@@ -614,7 +611,7 @@ function PolygonAgent(startEdge){
       _this.forwardPoint.y == _this.startPoint.y){
             
       var newPolygon = new Polygon(this.edges, this.points);
-//       newPolygon.render();
+      newPolygon.render();
     }
     else{
       var oldForwardPoint = this.forwardPoint;
@@ -651,10 +648,7 @@ window.onload = function(){
   }
   
   for(var j = 0; j < allEdges.length; j++){
-    if(allEdges[j].maxPolygons == 1){
-      allEdges[j].render("yellow");
-    }
-    if(allEdges[j].polygons < allEdges[j].maxPolygons){
+    if(allEdges[j].polygons.length < allEdges[j].maxPolygons){
       (new PolygonAgent(allEdges[j])).activate();
     }
   }
