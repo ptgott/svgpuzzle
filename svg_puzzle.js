@@ -1,36 +1,3 @@
-// **ISSUE** Given a currentEdge with a slope of 1 and a trailingEdge with a slope of Infinity,
-// the difference between slopes becomes -Infinity. This produces an angle of '90', which
-// is incorrect. The angle is obviously 45 on screen. What if I converted slope to angle 
-// before subtracting the angles? The angle would be taken from the horizontal.
-// Then, ideally, the current edge would an angle of 45deg, and the trailing edge would
-// have an angle of 90.
-// Right, so I've tried this, and here's the issue: there's no way to distinguish
-// a 90deg angle from a -90deg angle. This is because considering a difference in slope
-// removes any consideration of direction. If currentEdge is a vertical Edge and the Agent
-// is deciding between two horizontal Edges, both will always have the same slope. Thus
-// the difference between their slope and the slope of the vertical line will always be the same.
-// The key intervention in my solution is to select angles from other measurements, rather
-// than using slopes or trigonometry. 
-
-// Since I'm not working with the usual geometry (e.g. vertical lines are allowed; I'm 
-// treating 45deg lines as the same length as vertical /horizontal lines, etc),
-// I will need some kind of artificial rule. Here's one: angle = the difference
-// between distal points, given a shared vertex, with that difference mapped against
-// a set of conversions to degrees.
-
-// One strategy for finding an 'angle': Take the distance between the two unconnected
-// points of the two edges in question. 'Distance' here is the total number of 'steps'
-// between the points, i.e., how many grid edges you'd need to traverse to get from
-// one point to the other, regardless of direction: taxicab geometry. To get this,
-// I total the absolute value of the diff in xs with the absolute value of the diff in ys.
-
-// The problem with this approach: it relies on the lenght of edges. An edge that creates
-// a 45-degree angle with the horizontal produces a bigger distance than a second horizontal,
-// even though the latter is 180 degrees. CHALLENGE: Find another way to define angles
-// that requires neither slope nor taxicab-geometric distance.
-// I've added the 'pointApartFrom' function to Edge to supply points on which two
-// (supposedly adjoining) edges do not meet.
-
 var allEdges = [];
 var allPolygons = [];
 
@@ -158,17 +125,22 @@ function Edge(point1, point2){
   };
   
   this.angleFrom = function(otherEdge){
-    var edgeDifference = otherEdge.slope - this.slope;
-    
+  // Currently: I'm converting any difference in angle of '0' to '180', which allows
+  // this angle to show up as the largest angle in an array of angles from the same point.
+  
     var convertToAngle = {
       "0": 180,
       "1": 135,
       "Infinity": 90,
       "-1": 45
     }
+
+    var otherSlope = convertToAngle['' + otherEdge.slope];
+    var thisSlope = convertToAngle['' + this.slope];
+  
+    var resultAngle = otherSlope - thisSlope;
     
-    var valueToConvert = isNaN(edgeDifference) ? 0 : edgeDifference;
-    return convertToAngle["" + valueToConvert];
+    return resultAngle == 0 ? 180 : resultAngle;
     
   }
     
@@ -206,19 +178,7 @@ function Edge(point1, point2){
       );
     });
   }
-    
-  this.equals = function(otherEdge){
-    var thesePoints = [this.point1, this.point2];
-    var otherPoints = [otherEdge.point1, otherEdge.point2];
-    
-    return (thesePoints.filter(function(pnt1){
-      return otherPoints.some(function(pnt2){
-        pnt2.x == pnt1.x && pnt2.y == pnt1.y;
-      });
-    })).length == 2;
-    
-  }
-  
+     
   this.otherPointThan = function(criterionPoint){
     return ([this.point1, this.point2].filter(function(edgePoint){
       return (edgePoint.x != criterionPoint.x) || (edgePoint.y != criterionPoint.y);
@@ -279,7 +239,7 @@ function ExtendedLine(edge){
   this.getYWithX = function(x){
     var ve = this.visibleEdge;
     var yIntercept = this.yIntercept;
-    return new Point(x, (ve.slope * x) + yIntercept);
+    return (ve.slope * x) + yIntercept;
   }
   
   this.getXWithY = function(y){
@@ -306,7 +266,7 @@ function ExtendedLine(edge){
     
 
     for(var i = 0; i < window.puzzleGrid.squaresCount['x'] + 1; i ++){
-      pnts[i] = _this.getYWithX(i); 
+      pnts[i] = new Point(i, _this.getYWithX(i));
     }
     
     var pntsOnGrid = pnts.filter(function(element){
@@ -324,10 +284,13 @@ function ExtendedLine(edge){
     // In case you are tempted to replace this code with something that 
     // iterates through 'x' and 'y', I've tried it, and it makes things confusing without saving
     // space!
+    
+    var slp = Math.abs(_this.visibleEdge.slope);
+
     var resultForX = function(){
-      if(Math.abs(_this.visibleEdge.slope) > 0){
-        var resultingY = _this.getYWithX(otherPoint.x);
-        return new Point(otherPoint.x, resultingY);
+      if(slp > 0 && slp != Infinity){
+        var resultingX = _this.getXWithY(otherPoint.y);
+        return new Point(resultingX, otherPoint.y);
       }
       else{
         return (_this.getPointsByAxis('y', otherPoint.y))[0];
@@ -335,12 +298,12 @@ function ExtendedLine(edge){
     }
     
     var resultForY = function(){
-      if(Math.abs(_this.visibleEdge.slope) > 0){
-        var resultingX = _this.getXWithY(otherPoint.y);
-        return new Point(resultingX, otherPoint.y);
+      if(slp > 0 && slp != Infinity){
+        var resultingY = _this.getYWithX(otherPoint.x);
+        return new Point(otherPoint.x, resultingY);
       }
       else{
-       return (_this.getPointsByAxis('x', otherPoint.x))[0];
+        return (_this.getPointsByAxis('x', otherPoint.x))[0];
       }
     }
     
@@ -485,6 +448,9 @@ function PolygonAgent(startEdge){
     
   })();
   
+  this.startPoint = this.startEdge.otherPointThan(_this.forwardPoint);
+  console.log("this.startPoint", this.startPoint);
+  
 
   this.trailingEdges = function(){
     return this.currentEdge.edgesThatMeetAtPoint(this.forwardPoint);
@@ -514,6 +480,8 @@ function PolygonAgent(startEdge){
       var distalPoint = edg.otherPointThan(_this.forwardPoint);
     
       var comparisonPointsFor = _this.currentEdge.extendedLine.getComparisonPoints(distalPoint);
+      
+      console.log("the comparisonPointsFor", distalPoint, "is:", comparisonPointsFor);
             
     // Second, see which axes we're comparing to distalPoint. Horizontal or vertical lines
     // only require comparison along one axis. I.e. only one axis might have a rightTurn.
@@ -542,14 +510,14 @@ function PolygonAgent(startEdge){
     });
        
     
-    console.log("trailingEdges", trailingEdges);
+//     console.log("trailingEdges", trailingEdges);
         
-    console.log("anglesOfTrailingEdges", trailingEdges.map(function(edg){
-      return { 
-        distalPoint: edg.otherPointThan(_this.forwardPoint),
-        angle: _this.currentEdge.angleFrom(edg)
-      };
-    }));
+//     console.log("anglesOfTrailingEdges", trailingEdges.map(function(edg){
+//       return { 
+//         distalPoint: edg.otherPointThan(_this.forwardPoint),
+//         angle: _this.currentEdge.angleFrom(edg)
+//       };
+//     }));
     
     var rightEdgesByAcuteAngle = edgesOnTheRight.sort(function(a,b){
       return _this.currentEdge.angleFrom(a) - _this.currentEdge.angleFrom(b);
@@ -583,7 +551,10 @@ function PolygonAgent(startEdge){
         
 //  Remove first operand of '||' operator below once I get PolygonAgent to define a Polygon
 //  fully.        
-    if(this.edges.length > 50 || nextEdge.equals(this.startEdge)){ 
+    if(this.edges.length > 50 || (
+      _this.forwardPoint.x == _this.startPoint.x &&
+      _this.forwardPoint.y == _this.startPoint.y
+    )){
       console.log("There should be a new Polygon now!!");
       // insert code for a new Polygon here
     }
