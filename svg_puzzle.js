@@ -1,12 +1,3 @@
-//**ISSUE** PolygonAgent can produce Polygon just fine when the startEdge
-// is at the top of the Grid. Yet if it's along the very bottom edge,
-// you get a 'too much recursion' error: it can't find its initial point.
-//   A startEdge down the right side of the grid is okay.
-//   A startEdge down the left side of the grid creates the same issue.
-//   A startEdge that's not on the perimeter of the grid is okay.
-// SUMMARY: PolygonAgents beginning on the bottom or left of the perimeter cannot find its
-// origin. All other PolygonAgents can.
-
 var allEdges = [];
 var allPolygons = [];
 
@@ -230,7 +221,29 @@ function Edge(point1, point2){
   })();
   
   this.extendedLine = new ExtendedLine(this);
-    
+
+  this.whichPerimeter = function(){
+    var otherAxis = { x: "y", y: "x" };
+    var onBottomRight = function(axis){
+      var testAxis = otherAxis[axis];
+      return window.puzzleGrid.squaresCount[testAxis] == _this.point1[testAxis];
+    };
+    var perimeterEdges = {
+      "y,false":"left",
+      "y,true": "right",
+      "x,true": "bottom",
+      "x,false": "top"
+    };
+    if(!this.isAtPerimeter){
+      return "none";
+    }
+    else{
+      var onWhichAxis = this.point1.x - this.point2.x == 0 ? "y" : "x";
+      var results = [onWhichAxis, onBottomRight(onWhichAxis)].join(',');
+      return perimeterEdges[results];
+    }
+
+  }    
   
 }
 
@@ -450,11 +463,23 @@ function PolygonAgent(startEdge){
   this.edges = [startEdge];
   this.startEdge = startEdge;
   this.currentEdge = startEdge;
-  
-  this.currentDirection = new Direction(
-    startEdge.point2.x - startEdge.point1.x,
-    startEdge.point2.y - startEdge.point1.y
-  );
+      
+  this.currentDirection = (function getFirstDirection(){
+    var perimeterEdge = _this.startEdge.whichPerimeter();
+    var startDirs = {
+      top: { x: 1, y: 0 },
+      bottom: { x: -1, y:0 },
+      left: { x: 0, y: -1 },
+      right: { x: 0, y: 1 },
+      none: { 
+        x: _this.startEdge.point2.x - _this.startEdge.point1.x,
+        y: startEdge.point2.y - startEdge.point1.y
+      }
+    }
+    
+    return new Direction(startDirs[perimeterEdge]['x'], startDirs[perimeterEdge]['y']);
+    
+  })();
   
   
   this.forwardPoint = (function(){
@@ -481,9 +506,7 @@ function PolygonAgent(startEdge){
   }
     
   this.nextEdge = function(){ 
-  
-    console.log("forwardPoint", this.forwardPoint);
-    
+      
     var trailingEdges = this.trailingEdges();
         
     var rightTurnDirection = this.currentDirection.rightSideOfLine();
@@ -529,33 +552,17 @@ function PolygonAgent(startEdge){
     var rightEdgesByAcuteAngle = edgesOnTheRight.sort(function(a,b){
       return _this.currentEdge.angleFrom(a) - _this.currentEdge.angleFrom(b);
     });
-    
-    console.log("rightEdgesByAcuteAngle", rightEdgesByAcuteAngle.map(function(edg){
-      return {
-        distalPoint: edg.otherPointThan(_this.forwardPoint),
-        angle: _this.currentEdge.angleFrom(edg)        
-      }
-    }));
-    
+        
     
     var leftEdgesByObtuseAngle = edgesOnTheLeft.sort(function(a,b){
       return _this.currentEdge.angleFrom(b) - _this.currentEdge.angleFrom(a);
     });
     
-    console.log("leftEdgesByObtuseAngle", leftEdgesByObtuseAngle.map(function(edg){
-      return {
-        distalPoint: edg.otherPointThan(_this.forwardPoint),
-        angle: _this.currentEdge.angleFrom(edg)        
-      }
-    }));
     
     var chosenEdge = (
       rightEdgesByAcuteAngle.length > 0 ? rightEdgesByAcuteAngle[0] : leftEdgesByObtuseAngle[0]
     );
             
-    
-    console.log("=================");
-
     
     return chosenEdge;
     
@@ -608,20 +615,11 @@ window.onload = function(){
     allEdges[e].render('black');
   }
   
-// Bring the below 'for' block back once I get PolygonAgent to activate at all indices
-// of allEdges.
-//   for(var j = 0; j < allEdges.length; j++){
-//     if(allEdges[j].polygons < allEdges[j].maxPolygons){
-//       (new PolygonAgent(allEdges[j])).activate();
-//     }
-//   }
+  for(var j = 0; j < allEdges.length; j++){
+    if(allEdges[j].polygons < allEdges[j].maxPolygons){
+      (new PolygonAgent(allEdges[j])).activate();
+    }
+  }
 
-  (new PolygonAgent(allEdges[1])).activate();
-  
-// Once I get PolygonAgent to define a polygon fully:
-// 1- Add a 'for' loop that iterates through all Edges and creates a new PolygonAgent
-//    for the given edge if that edge has fewer than its maximum Polygons
-// 2- Once a Polygon has been created, add that Polygon to the .edges array
-//    of each of its Edges.
   
 }
