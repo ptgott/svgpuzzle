@@ -443,29 +443,36 @@ function Point(x,y){
   this.y = y;
 }
 
-function Polygon(edgeArray){
+function Polygon(edgeArray, pointsObject){
   var _this = this;
   this.edges = edgeArray;
-  this.points = (function(){
-    var pntsArry = [];
-    
-    for(var i = 0; i < _this.edges.length; i++){
-      var matchesPoint1 = pntsArry.some(function(pnt){
-        return _this.edges[i].point1.x == pnt.x && _this.edges[i].point1.y == pnt.y;        
-      });
-      var matchesPoint2 = pntsArry.some(function(pnt){
-        return _this.edges[i].point2.x == pnt.x && _this.edges[i].point2.y == pnt.y;        
-      });
-      matchesPoint1 || pntsArry.push(_this.edges[i].point1);
-      matchesPoint2 || pntsArry.push(_this.edges[i].point2); 
-    }
-    return pntsArry;
-  })();
-    
+  this.points = pointsObject;
+  
+  console.log(this);
+      
   this.render = function(){
-    for(var i = 0; i < this.edges.length; i++){
-      this.edges[i].render("pink");
-    }
+    var pointsString = (function(){
+      // I need a less 'magic' way to specify the initial offsets of each piece.
+//       var initialXOffset = Math.random() * document.body.clientWidth * .5;
+//       var initialYOffset = Math.random() * document.body.clientHeight * .5;
+
+// ISSUE: Polygons are being duplicated. Once there are only as many Polygons as there should be,
+// un-comment the 'initialOffset' variables and add these to renderedX and renderedY.
+// This will place each Polygon at a random place within the browser window.
+      var strng = '';
+      for(var i = 0, pnts = _this.points, keys = Object.keys(_this.points); i < keys.length; i++){
+        var renderedX = (pnts[keys[i]].x * window.puzzleGrid.squareSize);
+        var renderedY = (pnts[keys[i]].y * window.puzzleGrid.squareSize);
+        strng = strng + (renderedX + "," + renderedY + " ");
+      }
+      return strng;
+    })();
+    
+  // Here's the issue with rendering a Polygon: I need to keep the points in a particular order,
+  // which I can't do if I have an array of points. The solution:
+  // a) use an object literal to store points
+  // b) add points to the object as I produce the PolygonAgent.
+    window.puzzleSpace.polygon(pointsString).fill('red').stroke({ width: 1, color: "black" });  
   }
 }
 
@@ -474,6 +481,7 @@ function PolygonAgent(startEdge){
   this.edges = [startEdge];
   this.startEdge = startEdge;
   this.currentEdge = startEdge;
+  this.points = {};
       
   this.currentDirection = (function getFirstDirection(){
     var perimeterEdge = _this.startEdge.whichPerimeter();
@@ -511,6 +519,9 @@ function PolygonAgent(startEdge){
   })();
   
   this.startPoint = this.startEdge.otherPointThan(_this.forwardPoint); 
+  
+  this.points[0] = this.startPoint;
+  this.points[1] = this.forwardPoint;
 
   this.trailingEdges = function(){
     return this.currentEdge.edgesThatMeetAtPoint(this.forwardPoint);
@@ -589,8 +600,8 @@ function PolygonAgent(startEdge){
              
     if(_this.forwardPoint.x == _this.startPoint.x &&
       _this.forwardPoint.y == _this.startPoint.y){
-      
-      var newPolygon = new Polygon(this.edges);
+            
+      var newPolygon = new Polygon(this.edges, this.points);
       newPolygon.render();
     }
     else{
@@ -600,6 +611,7 @@ function PolygonAgent(startEdge){
       this.currentEdge = nextEdge;
             
       this.forwardPoint = nextEdge.otherPointThan(oldForwardPoint);
+      _this.points[Object.keys(_this.points).length] = _this.forwardPoint;
       this.currentDirection = new Direction(
         this.forwardPoint.x - oldForwardPoint.x,
         this.forwardPoint.y - oldForwardPoint.y
@@ -616,7 +628,7 @@ function PolygonAgent(startEdge){
 
 
 window.onload = function(){
-  window.puzzleGrid = new Grid(5, 5, 40);  
+  window.puzzleGrid = new Grid(3, 3, 50);  
   window.puzzleSpace = SVG('puzzleSpace').size('100%', '100%');
   window.puzzleGrid.render();
   createEdgesFromGridPerimeter();
