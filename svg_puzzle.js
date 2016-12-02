@@ -473,25 +473,23 @@ function Polygon(edgeArray, pointsObject){
   function startDrag(mousedownEvent){
     mousedownEvent.preventDefault();
     // I'm calling 'preventDefault' to avert the browser's own drag event.
-    _this.shape.node.addEventListener('mousemove', dragGo);
+    window.puzzleSpace.node.addEventListener('mousemove', dragGo);
     
-    _this.shape.node.addEventListener('mouseup', dragStop);
+    window.puzzleSpace.node.addEventListener('mouseup', dragStop);
     
-    _this.shape.node.addEventListener('mouseout', reAttach);
     
     function dragStop(){
-      _this.shape.node.removeEventListener('mousemove', dragGo);
-      _this.shape.node.removeEventListener('mouseout', reAttach);
+      window.puzzleSpace.node.removeEventListener('mousemove', dragGo);
     }
     
-    console.log(_this.shape.bbox());
     var mouseInShape = {
       x: mousedownEvent.clientX - _this.shape.bbox().x,
       y: mousedownEvent.clientY - _this.shape.bbox().y
     }
     
+    
     function dragGo(mouseMoveEvent){
-          
+              
       var moveTo = {
         x: mouseMoveEvent.clientX - mouseInShape.x,
         y: mouseMoveEvent.clientY - mouseInShape.y
@@ -500,16 +498,7 @@ function Polygon(edgeArray, pointsObject){
       _this.shape.move(moveTo.x, moveTo.y);
       
     }
-    
-    function reAttach(mouseOutEvent){
-      console.log("reattaching");
-      var moveTo = {
-        x: mouseOutEvent.clientX - mouseInShape.x,
-        y: mouseOutEvent.clientY - mouseInShape.y
-      }
-      
-      _this.shape.move(moveTo.x, moveTo.y);
-    } 
+
   }
   
 }
