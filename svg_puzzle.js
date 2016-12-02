@@ -10,10 +10,28 @@
 // -- When there are extra pieces, no Edges have fewer than their maxPolygons. In all 
 //    cases I've seen, Edges either meet or exceed their maxPolygons.
 
+// ONE IDEA: Within PolygonAgent.nextEdge(), remove from contention for nextEdge any Edge
+// meeting its maxPolygons (this way I'd eliminate scenarios where the initial Edge
+// has polygons to spare but its neighbours do not).
+// ISSUE FOLLOWING THIS IDEA: Occasionally a Polygon will include an Edge that 
+// just beyond what you'd expect, as well as a 'nextEdge is undefined' error. Culprits/solutions:
+// -- Check whether my invocation of maxPolygons in trailingEdges is accurate
+// -- Maybe just scrap the whole Grid and redo it if there's an error
+// -- Remember that the 'for' loop which creates PolygonAgents
+//    only moves through each Edge once. Is this the best way to go about filling in Edges?
+// -- Why not, after each Polygon, filter allEdges by those with fewer than maxPolygons,
+//    then start a PolygonAgent by selecting from these at random?
+
 
 var allEdges = [];
 var allPolygonAgents = [];
 var allPolygons = [];
+
+function getRandomColour(){
+  var colours = ["red", "green", "blue", "brown", "pink", "purple", "orange"];
+  var indx = Math.round(Math.random() * colours.length);
+  return colours[indx];
+}
 
 function createEdgesFromGridPerimeter(){
   for(var i = 0; i < window.puzzleGrid.squaresCount['x']; i++){
@@ -526,6 +544,9 @@ function PolygonAgent(startEdge){
   this.currentEdge = startEdge;
   this.points = {};
   
+  //this.colour is used for diagnostic purposes. Delete if I want to.
+  this.color = getRandomColour();
+  
   allPolygonAgents.push(this);
       
   this.currentDirection = (function getFirstDirection(){
@@ -569,7 +590,11 @@ function PolygonAgent(startEdge){
   this.points[1] = this.forwardPoint;
 
   this.trailingEdges = function(){
-    return this.currentEdge.edgesThatMeetAtPoint(this.forwardPoint);
+    var allTrailingEdges = this.currentEdge.edgesThatMeetAtPoint(this.forwardPoint);
+    var trailingEdgesMissingPolygons = allTrailingEdges.filter(function(edg){
+      return edg.polygons.length < edg.maxPolygons;
+    });
+    return trailingEdgesMissingPolygons;
   }
     
   this.nextEdge = function(){ 
@@ -637,6 +662,10 @@ function PolygonAgent(startEdge){
   
   this.activate = function(){
     var nextEdge = this.nextEdge();
+    nextEdge.render(this.color);
+    
+    // Remove the below 'if' block once I eliminate the duplicate-Polygon issue
+    if(this.edges.length > 25){ return; }
              
     if(_this.forwardPoint.x == _this.startPoint.x &&
       _this.forwardPoint.y == _this.startPoint.y){
@@ -668,14 +697,15 @@ window.onload = function(){
   createEdgesFromGridSlices(2, 2);
   
   window.puzzleGrid.render();  
-  
-  for(var i = 0; i < allEdges.length; i++){ allEdges[i].render('black'); }
-  
+    
   for(var j = 0; j < allEdges.length; j++){
     if(allEdges[j].polygons.length < allEdges[j].maxPolygons){
       (new PolygonAgent(allEdges[j])).activate();
     }
   }
+  
+  for(var i = 0; i < allEdges.length; i++){ allEdges[i].render('gray'); }
+
   console.log(
     "edges with fewer than their maxPolygons",
     allEdges.filter(function(edge){ return edge.polygons.length < edge.maxPolygons; })
