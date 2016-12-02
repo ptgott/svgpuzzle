@@ -1,4 +1,18 @@
+// **ISSUE**: sometimes there are more Polygons created than will fit in one square:
+// two Polygons are duplicates of others!
+// -- In these cases, the number of Polygons is equal to the number of PolygonAgents.
+// -- There is a number of Edges the .polygons.length of which exceed their .maxPolygons.
+//    My guess is that I only invoke the .maxPolygons restriction on the 'for' loop
+//    through allEdges, when determining whether to initiate a PolygonAgent, and not
+//    on each of the Edges that would be involved in that PolygonAgent.
+// -- Indeed, when there are no leftover puzzle pieces, all Edges have met their
+//    maxEdges limit.
+// -- When there are extra pieces, no Edges have fewer than their maxPolygons. In all 
+//    cases I've seen, Edges either meet or exceed their maxPolygons.
+
+
 var allEdges = [];
+var allPolygonAgents = [];
 var allPolygons = [];
 
 function createEdgesFromGridPerimeter(){
@@ -443,6 +457,8 @@ function Polygon(edgeArray, pointsObject){
   var _this = this;
   this.edges = edgeArray;
   this.points = pointsObject;
+  
+  allPolygons.push(this);
       
   for(var i = 0; i < this.edges.length; i++){
     this.edges[i].polygons.push(this);
@@ -509,6 +525,8 @@ function PolygonAgent(startEdge){
   this.startEdge = startEdge;
   this.currentEdge = startEdge;
   this.points = {};
+  
+  allPolygonAgents.push(this);
       
   this.currentDirection = (function getFirstDirection(){
     var perimeterEdge = _this.startEdge.whichPerimeter();
@@ -619,11 +637,6 @@ function PolygonAgent(startEdge){
   
   this.activate = function(){
     var nextEdge = this.nextEdge();
-    
-    // The 'if' statement below is a safeguard against 'too much recursion' errors.
-    // Remove it once I've got all Polygons to form as expected, from all 
-    // eligible startEdges.
-    if(this.edges.length > 25){ return; }
              
     if(_this.forwardPoint.x == _this.startPoint.x &&
       _this.forwardPoint.y == _this.startPoint.y){
@@ -645,24 +658,33 @@ function PolygonAgent(startEdge){
     }
   }            
     
-    // later I'll want to take the points that belong to a Polygon (not Point objects,
-    // as different Edges will have produced different Points for the same coordinates)
-    // and add these to an SVG polygon.
-    
 }
 
 
 window.onload = function(){
-  window.puzzleGrid = new Grid(3, 3, 50);  
+  window.puzzleGrid = new Grid(3, 3, 50);
   window.puzzleSpace = SVG('puzzleSpace').size('100%', '100%');
   createEdgesFromGridPerimeter();
   createEdgesFromGridSlices(2, 2);
+  
+  window.puzzleGrid.render();  
+  
+  for(var i = 0; i < allEdges.length; i++){ allEdges[i].render('black'); }
   
   for(var j = 0; j < allEdges.length; j++){
     if(allEdges[j].polygons.length < allEdges[j].maxPolygons){
       (new PolygonAgent(allEdges[j])).activate();
     }
   }
+  console.log(
+    "edges with fewer than their maxPolygons",
+    allEdges.filter(function(edge){ return edge.polygons.length < edge.maxPolygons; })
+  );
+  
+  console.log(
+    "edges with more than their maxPolygons",
+    allEdges.filter(function(edge){ return edge.polygons.length > edge.maxPolygons; })
+  );
 
   
 }
