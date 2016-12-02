@@ -488,7 +488,9 @@ function Puzzle(){
   
   this.carve = function(){   
     createEdgesFromGridPerimeter();
-    createEdgesFromGridSlices(2, 2);
+    // The arguments for this call to 'creatEdgesFromGridSlices' are pretty arbitrary.
+    // Make them seem less so!
+    createEdgesFromGridSlices(3, 3);
     for(var j = 0; j < allEdges.length; j++){
       if(allEdges[j].polygons.length < allEdges[j].maxPolygons){
         var agent = new PolygonAgent(allEdges[j]);
@@ -510,7 +512,11 @@ function Puzzle(){
     allPolygonAgents = [];
     allPolygons = [];
     this.errors++;
-    if(this.errors < 5){
+    // The number of errors I let the system tolerate is pretty arbitrary. Make it less so!
+    // For instance, the probability that a puzzle will encounter an error, and the 
+    // number of errors it'll probably take before the system finds a working puzzle,
+    // increases with the number of gridSlices and grid squares.
+    if(this.errors < 100){
       this.carve();
     }
     else{
@@ -753,7 +759,7 @@ function PolygonAgent(startEdge){
 
 window.onload = function(){
 
-  window.puzzleGrid = new Grid(5, 5, 40);
+  window.puzzleGrid = new Grid(10, 10, 20);
   window.puzzleSpace = SVG('puzzleSpace').size('100%', '100%');
   window.puzzleGrid.renderGuide();
   
