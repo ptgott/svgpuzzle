@@ -15,12 +15,13 @@
 // has polygons to spare but its neighbours do not).
 // ISSUE FOLLOWING THIS IDEA: Occasionally a Polygon will include an Edge that 
 // just beyond what you'd expect, as well as a 'nextEdge is undefined' error. Culprits/solutions:
-// -- Check whether my invocation of maxPolygons in trailingEdges is accurate
-// -- Maybe just scrap the whole Grid and redo it if there's an error
+// -- Check whether my invocation of maxPolygons in trailingEdges is accurate (IT IS!).
 // -- Remember that the 'for' loop which creates PolygonAgents
 //    only moves through each Edge once. Is this the best way to go about filling in Edges?
 // -- Why not, after each Polygon, filter allEdges by those with fewer than maxPolygons,
 //    then start a PolygonAgent by selecting from these at random?
+// -- Maybe just scrap the whole Grid and redo it if there's an error
+
 
 
 var allEdges = [];
