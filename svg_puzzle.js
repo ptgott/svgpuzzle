@@ -1,11 +1,3 @@
-// ***ISSUE***
-// Every now and then, an Edge will not include/be included in all of the Polygons I would
-// expect. If I render as 'red' any Edge that is included in a Polygon, there is occasionally
-// one Edge that remains black. 
-// Until I sort this out, I've commented out various bits of code, including the
-// code that renders the puzzle. Once I sort this out, un-comment this and 
-// add the random x and y offset code to the coordinate string in Polygon.render().
-
 var allEdges = [];
 var allPolygons = [];
 
@@ -210,10 +202,6 @@ function Edge(point1, point2){
       this.point2.y * window.puzzleGrid.squareSize
     );
     line.stroke({ width: '1px', color: colour });
-    line.node.addEventListener('click', function(){
-      console.log(_this);
-      console.log("index in all edges", allEdges.indexOf(_this));
-    });
   }
   
   this.remove = function(){
@@ -455,9 +443,7 @@ function Polygon(edgeArray, pointsObject){
   var _this = this;
   this.edges = edgeArray;
   this.points = pointsObject;
-  
-  console.log(this);
-    
+      
   for(var i = 0; i < this.edges.length; i++){
     this.edges[i].polygons.push(this);
   }
@@ -465,8 +451,8 @@ function Polygon(edgeArray, pointsObject){
   this.render = function(){
     var pointsString = (function(){
       // I need a less 'magic' way to specify the initial offsets of each piece.
-      var initialXOffset = Math.random() * (document.body.clientWidth/2);
-      var initialYOffset = Math.random() * (document.body.clientHeight/2);
+      var initialXOffset = Math.round(Math.random() * (document.body.clientWidth/2));
+      var initialYOffset = Math.round(Math.random() * (document.body.clientHeight/2));
 
       var strng = '';
       for(var i = 0, pnts = _this.points, keys = Object.keys(_this.points); i < keys.length; i++){
@@ -477,12 +463,58 @@ function Polygon(edgeArray, pointsObject){
       return strng;
     })();
     
-  // Here's the issue with rendering a Polygon: I need to keep the points in a particular order,
-  // which I can't do if I have an array of points. The solution:
-  // a) use an object literal to store points
-  // b) add points to the object as I produce the PolygonAgent.
-    window.puzzleSpace.polygon(pointsString).fill('red').stroke({ width: 1, color: "black" });  
+    this.shape = window.puzzleSpace.polygon(pointsString).fill('rgb(220,220,220)').stroke({ width: 1, color: "black" });  
   }
+  
+  this.render();
+  
+  this.shape.node.addEventListener('mousedown', startDrag);
+  
+  function startDrag(mousedownEvent){
+    mousedownEvent.preventDefault();
+    // I'm calling 'preventDefault' to avert the browser's own drag event.
+    var initialMousePlace = new Point(mousedownEvent.screenX, mousedownEvent.screenY);
+    _this.shape.node.addEventListener('mousemove', dragGo);
+    
+    _this.shape.node.addEventListener('mouseup', dragStop);
+    _this.shape.node.addEventListener('mouseout', dragStop);
+    
+    function dragStop(){
+      _this.shape.node.removeEventListener('mousemove', dragGo);
+    }
+    
+    function dragGo(mouseMoveEvent){
+      // It turns out that if you zoom in within the browser, the shapes move
+      // exponentially when dragged. This is because the rate at which the shape moves
+      // (changeIn.x, changeIn.y) is greater than the rate at which the mouse moves.
+      // In future versions, I may want to assign a variable for the difference
+      // between one pixel of mouse movement and one step between coordinates in the SVG
+      // viewBox. 
+      
+      // Currently, dragging is based on nudging a shape the same distance as the
+      // relative movement of the mouse. The position of the shape remains
+      // decoupled from the position of the mouse. This poses a risk of the mouse
+      // moving outside the shape. I might want to rejigger this code to, (a), calculate
+      // the position of the mouse inside the shape's bounding box on first click, and (b)
+      // move the shape *to* the mouse's position (while the mouse maintains its position inside
+      // the shape). 
+      
+      var newMousePlace = new Point(mouseMoveEvent.screenX, mouseMoveEvent.screenY);
+      var changeIn = {
+        x: newMousePlace.x - initialMousePlace.x,
+        y: newMousePlace.y - initialMousePlace.y
+      };
+
+      var moveTo = {
+        x: _this.shape.bbox().x + changeIn.x,
+        y: _this.shape.bbox().y + changeIn.y
+      }
+
+      _this.shape.move(moveTo.x, moveTo.y);
+      initialMousePlace = newMousePlace;
+    } 
+  }
+  
 }
 
 function PolygonAgent(startEdge){
@@ -611,11 +643,9 @@ function PolygonAgent(startEdge){
       _this.forwardPoint.y == _this.startPoint.y){
             
       var newPolygon = new Polygon(this.edges, this.points);
-      newPolygon.render();
     }
     else{
       var oldForwardPoint = this.forwardPoint;
-      nextEdge.render("red");
       this.edges.push(nextEdge);
       this.currentEdge = nextEdge;
             
@@ -639,13 +669,8 @@ function PolygonAgent(startEdge){
 window.onload = function(){
   window.puzzleGrid = new Grid(3, 3, 50);  
   window.puzzleSpace = SVG('puzzleSpace').size('100%', '100%');
-  window.puzzleGrid.render();
   createEdgesFromGridPerimeter();
   createEdgesFromGridSlices(2, 2);
-
-  for(var e = 0; e < allEdges.length; e++){
-    allEdges[e].render('black');
-  }
   
   for(var j = 0; j < allEdges.length; j++){
     if(allEdges[j].polygons.length < allEdges[j].maxPolygons){
