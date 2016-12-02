@@ -1,36 +1,10 @@
-// **ISSUE**: sometimes there are more Polygons created than will fit in one square:
-// two Polygons are duplicates of others!
-// -- In these cases, the number of Polygons is equal to the number of PolygonAgents.
-// -- There is a number of Edges the .polygons.length of which exceed their .maxPolygons.
-//    My guess is that I only invoke the .maxPolygons restriction on the 'for' loop
-//    through allEdges, when determining whether to initiate a PolygonAgent, and not
-//    on each of the Edges that would be involved in that PolygonAgent.
-// -- Indeed, when there are no leftover puzzle pieces, all Edges have met their
-//    maxEdges limit.
-// -- When there are extra pieces, no Edges have fewer than their maxPolygons. In all 
-//    cases I've seen, Edges either meet or exceed their maxPolygons.
-
-// ONE IDEA: Within PolygonAgent.nextEdge(), remove from contention for nextEdge any Edge
-// meeting its maxPolygons (this way I'd eliminate scenarios where the initial Edge
-// has polygons to spare but its neighbours do not).
-// ISSUE FOLLOWING THIS IDEA: Occasionally a Polygon will include an Edge that 
-// just beyond what you'd expect, as well as a 'nextEdge is undefined' error. Culprits/solutions:
-// -- Check whether my invocation of maxPolygons in trailingEdges is accurate (IT IS!).
-// -- Remember that the 'for' loop which creates PolygonAgents
-//    only moves through each Edge once. Is this the best way to go about filling in Edges?
-// -- Why not, after each Polygon, filter allEdges by those with fewer than maxPolygons,
-//    then start a PolygonAgent by selecting from these at random?
-// -- Maybe just scrap the whole Grid and redo it if there's an error
-
-
-
 var allEdges = [];
 var allPolygonAgents = [];
 var allPolygons = [];
 
-function getRandomColour(){
-  var colours = ["red", "green", "blue", "brown", "pink", "purple", "orange"];
-  var indx = Math.round(Math.random() * colours.length);
+function getRandomColor(){
+  var colours = ["red", "green", "blue", "pink", "purple", "orange", "gray"];
+  var indx = Math.round(Math.random() * (colours.length -1));
   return colours[indx];
 }
 
@@ -381,7 +355,7 @@ function Grid(squaresX, squaresY, squareSizePx){
     color: 'rgb(200,200,200)'
   }
   
-  this.render = function(){
+  this.renderForDebug = function(){
     var gridLines = window.puzzleSpace.group();
     for(var i = 0; i < this.squaresCount['y'] + 1; i++){
       var line = window.puzzleSpace.line(
@@ -405,6 +379,41 @@ function Grid(squaresX, squaresY, squareSizePx){
       line.stroke(gridLineQualities);
     }
   }  
+  this.renderGuide = function(){
+    var sc = this.squaresCount;
+    var ss = this.squareSize;
+   
+    var guideOffset = {
+      x: document.body.clientWidth/2 - (sc.x*ss)/2,
+      y: document.body.clientHeight/2 - (sc.y*ss)/2
+    };
+
+    var gridPerimeter = window.puzzleSpace.group();
+    gridPerimeter.add(window.puzzleSpace.line(
+      0 + guideOffset.x, 
+      0 + guideOffset.y, 
+      sc.x*ss + guideOffset.x, 
+      0 + guideOffset.y
+    ).stroke(gridLineQualities));
+    gridPerimeter.add(window.puzzleSpace.line(
+      0 + guideOffset.x,
+      sc.y*ss + guideOffset.y,
+      sc.x*ss + guideOffset.x,
+      sc.y*ss + guideOffset.y
+    ).stroke(gridLineQualities));
+    gridPerimeter.add(window.puzzleSpace.line(
+      0 + guideOffset.x,
+      0 + guideOffset.y,
+      0 + guideOffset.x,
+      sc.y*ss + guideOffset.y
+    ).stroke(gridLineQualities));
+    gridPerimeter.add(window.puzzleSpace.line(
+      sc.x*ss + guideOffset.x,
+      0 + guideOffset.y,
+      sc.x*ss + guideOffset.x,
+      sc.y*ss + guideOffset.y
+    ).stroke(gridLineQualities));
+  }
 }
 
 function GridSliceAgent(axis){
@@ -472,10 +481,52 @@ function Point(x,y){
   this.y = y;
 }
 
+function Puzzle(){
+// I need to make allEdges, allPolygons and allPolygonAgents properties of Puzzle
+  this.errors = 0;
+  this.color = getRandomColor();
+  
+  this.carve = function(){   
+    createEdgesFromGridPerimeter();
+    createEdgesFromGridSlices(2, 2);
+    for(var j = 0; j < allEdges.length; j++){
+      if(allEdges[j].polygons.length < allEdges[j].maxPolygons){
+        var agent = new PolygonAgent(allEdges[j]);
+        agent.activate();
+        !agent.giveUp || this.recarve();
+      }
+    }
+    
+  }
+  
+  this.finalize = function(){
+    for(var i = 0; i < allPolygons.length; i++){
+      allPolygons[i].render();
+    }
+  }
+  
+  this.recarve = function(){
+    allEdges = [];
+    allPolygonAgents = [];
+    allPolygons = [];
+    this.errors++;
+    if(this.errors < 5){
+      this.carve();
+    }
+    else{
+      throw "There've been too many attempts to set up the puzzle. I'm giving up!";
+      // So far I haven't handled this exception. One way to handle it would be to
+      // present the user with an option to try producing the puzzle again.
+      // another would be to display an error message and be all sad and stuff.
+    }
+  }
+}
+
 function Polygon(edgeArray, pointsObject){
   var _this = this;
   this.edges = edgeArray;
   this.points = pointsObject;
+  this.color = window.puzzle.color;
   
   allPolygons.push(this);
       
@@ -487,23 +538,23 @@ function Polygon(edgeArray, pointsObject){
     var pointsString = (function(){
       // I need a less 'magic' way to specify the initial offsets of each piece.
       var initialXOffset = Math.round(Math.random() * (document.body.clientWidth/2));
-      var initialYOffset = Math.round(Math.random() * (document.body.clientHeight/2));
+      var initialYOffset = Math.round(Math.random() * (document.body.clientHeight/3));
 
       var strng = '';
       for(var i = 0, pnts = _this.points, keys = Object.keys(_this.points); i < keys.length; i++){
         var renderedX = (pnts[keys[i]].x * window.puzzleGrid.squareSize) + initialXOffset;
-        var renderedY = (pnts[keys[i]].y * window.puzzleGrid.squareSize) + initialXOffset;
+        var renderedY = (pnts[keys[i]].y * window.puzzleGrid.squareSize) + initialYOffset;
         strng = strng + (renderedX + "," + renderedY + " ");
       }
       return strng;
     })();
     
-    this.shape = window.puzzleSpace.polygon(pointsString).fill('rgb(220,220,220)').stroke({ width: 1, color: "black" });  
+    this.shape = window.puzzleSpace.polygon(pointsString).fill(this.color).stroke(
+      { width: 1, color: "black" }
+    );  
+    this.shape.node.addEventListener('mousedown', startDrag);
   }
-  
-  this.render();
-  
-  this.shape.node.addEventListener('mousedown', startDrag);
+    
   
   function startDrag(mousedownEvent){
     mousedownEvent.preventDefault();
@@ -545,8 +596,7 @@ function PolygonAgent(startEdge){
   this.currentEdge = startEdge;
   this.points = {};
   
-  //this.colour is used for diagnostic purposes. Delete if I want to.
-  this.color = getRandomColour();
+  this.giveUp = false;
   
   allPolygonAgents.push(this);
       
@@ -663,10 +713,20 @@ function PolygonAgent(startEdge){
   
   this.activate = function(){
     var nextEdge = this.nextEdge();
-    nextEdge.render(this.color);
     
-    // Remove the below 'if' block once I eliminate the duplicate-Polygon issue
-    if(this.edges.length > 25){ return; }
+    // I'm including the below 'if' block, as well as the whole 'Puzzle' object and its
+    // associated 'carve', 'finalize', and 'recarve' methods, because every now and then,
+    // 'nextEdge' comes up as undefined or the PolygonAgent goes astray. I'm not sure why
+    // this happens. For some reason, there are times when the initial Edge within a 
+    // PolygonAgent has fewer than its maxPolygons, but some of the following Edges
+    // have reached their polygon limit. In these moments, if I filter out
+    // Edges that have reached .maxPolygons in 'this.trailingEdges', the PolygonAgent
+    // will see the rightmost Edge as one that's patently not to the 'right' at all. In these
+    // moments, there's a recursion issue and the whole enterprise has to be abandoned.
+    if(nextEdge == undefined || this.edges.length > 25){  
+      this.giveUp = true; 
+      return; 
+    }
              
     if(_this.forwardPoint.x == _this.startPoint.x &&
       _this.forwardPoint.y == _this.startPoint.y){
@@ -692,30 +752,13 @@ function PolygonAgent(startEdge){
 
 
 window.onload = function(){
-  window.puzzleGrid = new Grid(3, 3, 50);
+
+  window.puzzleGrid = new Grid(5, 5, 40);
   window.puzzleSpace = SVG('puzzleSpace').size('100%', '100%');
-  createEdgesFromGridPerimeter();
-  createEdgesFromGridSlices(2, 2);
+  window.puzzleGrid.renderGuide();
   
-  window.puzzleGrid.render();  
-    
-  for(var j = 0; j < allEdges.length; j++){
-    if(allEdges[j].polygons.length < allEdges[j].maxPolygons){
-      (new PolygonAgent(allEdges[j])).activate();
-    }
-  }
-  
-  for(var i = 0; i < allEdges.length; i++){ allEdges[i].render('gray'); }
-
-  console.log(
-    "edges with fewer than their maxPolygons",
-    allEdges.filter(function(edge){ return edge.polygons.length < edge.maxPolygons; })
-  );
-  
-  console.log(
-    "edges with more than their maxPolygons",
-    allEdges.filter(function(edge){ return edge.polygons.length > edge.maxPolygons; })
-  );
-
-  
+  window.puzzle = new Puzzle();
+  window.puzzle.carve();
+  window.puzzle.finalize();
+   
 }
