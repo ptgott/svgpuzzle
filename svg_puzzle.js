@@ -473,45 +473,36 @@ function Polygon(edgeArray, pointsObject){
   function startDrag(mousedownEvent){
     mousedownEvent.preventDefault();
     // I'm calling 'preventDefault' to avert the browser's own drag event.
-    var initialMousePlace = new Point(mousedownEvent.screenX, mousedownEvent.screenY);
     _this.shape.node.addEventListener('mousemove', dragGo);
     
     _this.shape.node.addEventListener('mouseup', dragStop);
-    _this.shape.node.addEventListener('mouseout', dragStop);
     
     function dragStop(){
       _this.shape.node.removeEventListener('mousemove', dragGo);
     }
     
+    console.log(_this.shape.bbox());
+    var mouseInShape = {
+      x: mousedownEvent.clientX - _this.shape.bbox().x,
+      y: mousedownEvent.clientY - _this.shape.bbox().y
+    }
+    
     function dragGo(mouseMoveEvent){
-      // It turns out that if you zoom in within the browser, the shapes move
-      // exponentially when dragged. This is because the rate at which the shape moves
-      // (changeIn.x, changeIn.y) is greater than the rate at which the mouse moves.
-      // In future versions, I may want to assign a variable for the difference
-      // between one pixel of mouse movement and one step between coordinates in the SVG
-      // viewBox. 
+// Working on: update some state so that the mouse physically cannot go outside
+// of a moving shape.
       
-      // Currently, dragging is based on nudging a shape the same distance as the
-      // relative movement of the mouse. The position of the shape remains
-      // decoupled from the position of the mouse. This poses a risk of the mouse
-      // moving outside the shape. I might want to rejigger this code to, (a), calculate
-      // the position of the mouse inside the shape's bounding box on first click, and (b)
-      // move the shape *to* the mouse's position (while the mouse maintains its position inside
-      // the shape). 
+      console.log("mouseInShape", mouseInShape)
       
-      var newMousePlace = new Point(mouseMoveEvent.screenX, mouseMoveEvent.screenY);
-      var changeIn = {
-        x: newMousePlace.x - initialMousePlace.x,
-        y: newMousePlace.y - initialMousePlace.y
-      };
-
       var moveTo = {
-        x: _this.shape.bbox().x + changeIn.x,
-        y: _this.shape.bbox().y + changeIn.y
+        x: mouseMoveEvent.clientX - mouseInShape.x,
+        y: mouseMoveEvent.clientY - mouseInShape.y
       }
-
+      
+      console.log("moveTo", moveTo);
+      console.log("====================");
+      
       _this.shape.move(moveTo.x, moveTo.y);
-      initialMousePlace = newMousePlace;
+      
     } 
   }
   
