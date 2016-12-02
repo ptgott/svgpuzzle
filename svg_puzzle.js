@@ -477,8 +477,11 @@ function Polygon(edgeArray, pointsObject){
     
     _this.shape.node.addEventListener('mouseup', dragStop);
     
+    _this.shape.node.addEventListener('mouseout', reAttach);
+    
     function dragStop(){
       _this.shape.node.removeEventListener('mousemove', dragGo);
+      _this.shape.node.removeEventListener('mouseout', reAttach);
     }
     
     console.log(_this.shape.bbox());
@@ -488,21 +491,24 @@ function Polygon(edgeArray, pointsObject){
     }
     
     function dragGo(mouseMoveEvent){
-// Working on: update some state so that the mouse physically cannot go outside
-// of a moving shape.
-      
-      console.log("mouseInShape", mouseInShape)
-      
+          
       var moveTo = {
         x: mouseMoveEvent.clientX - mouseInShape.x,
         y: mouseMoveEvent.clientY - mouseInShape.y
       }
       
-      console.log("moveTo", moveTo);
-      console.log("====================");
-      
       _this.shape.move(moveTo.x, moveTo.y);
       
+    }
+    
+    function reAttach(mouseOutEvent){
+      console.log("reattaching");
+      var moveTo = {
+        x: mouseOutEvent.clientX - mouseInShape.x,
+        y: mouseOutEvent.clientY - mouseInShape.y
+      }
+      
+      _this.shape.move(moveTo.x, moveTo.y);
     } 
   }
   
